@@ -1,0 +1,14 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente
+.env
+
+# Chaves e credenciais sensíveis
+firebase-service-account-key.json
+serviceAccountKey.json
+google-credentials.json
+
+# Logs
+npm-debug.log
+yarn-debug

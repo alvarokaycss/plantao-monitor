@@ -1,0 +1,1038 @@
+/* ============================================== */
+/* 1. Variáveis Globais (:root)                   */
+/* ============================================== */
+:root {
+    /* Cores de Estrutura */
+    --cor-fundo: #EBF6F2;
+    --cor-navbar: #FAFAFA;
+    --cor-principal-div: #FAFAFA; /* Fundo de "card" (Filtros, Headers) */
+    --cor-interna-div: #FFFFFF; /* Fundo do item de incidente */
+    --cor-linha: #C2D4CE; /* Bordas (contrasta com --cor-principal-div) */
+    
+    /* Cores de Texto */
+    --cor-texto-principal: #2C5132;
+    --cor-letra-clara: #FFFFFF;
+    --cor-texto-secundario: #6F8873; /* Para labels, placeholders */
+    --cor-texto-botao-ack: #2C5132; /* Texto escuro para botão amarelo */
+
+    /* Cores de Ação e Status */
+    --cor-kpi-box: #FAFAFA;
+    --cor-status-aberto: #761818;
+    --cor-status-ack: #F3C810;
+    --cor-status-fechado: #ACACAC;
+
+    /* Cores KPI Plantonista (REQ 6) */
+    --cor-plantonista-fundo: #FFFBE8;
+    --cor-plantonista-borda-fonte: #F3C810;
+
+    /* Novas Cores de Fundo da Prioridade */
+    --cor-prio-alta-fundo: #F7CDCD;
+    --cor-prio-media-fundo: #F9F9DB;
+    --cor-prio-baixa-fundo: #EBEBEB;
+    
+    /* Cores de Botões */
+    --cor-botao-exportar: #214CA9;
+    --cor-botao-close: #2C5132;      /* Botão Fechar (verde escuro) */
+    --cor-botao-ack: #F3C810;       /* Botão ACK (amarelo) */
+    --cor-botao-padrao: #2C5132;    /* Botão Filtrar (verde kpi) */
+    --cor-botao-desabilitado: #ACACAC;
+    
+    /* Layout */
+    --raio-borda: 8px;
+    --largura-maxima: 1200px;
+    
+    /* Fontes */
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* ============================================== */
+/* 2. Reset Básico e Estilos Globais              */
+/* ============================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto-principal);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+button, select, input, textarea {
+    font-family: inherit;
+    font-size: 100%;
+    color: inherit;
+    border-radius: var(--raio-borda);
+    border: 1px solid var(--cor-linha);
+}
+
+textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    background-color: var(--cor-interna-div); /* Garante fundo branco */
+    resize: vertical; /* Permite redimensionar verticalmente */
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    padding: 8px 14px;
+    font-weight: 600;
+    color: var(--cor-letra-clara);
+    transition: opacity 0.2s;
+}
+button:hover {
+    opacity: 0.85;
+}
+button:disabled {
+    background-color: var(--cor-botao-desabilitado) !important;
+    color: var(--cor-letra-clara) !important;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Estilo de "Card" (Div principal branca/cinza-clara) */
+.card {
+    background-color: var(--cor-principal-div);
+    border: 1px solid var(--cor-linha);
+    border-radius: var(--raio-borda);
+    padding: 16px;
+}
+
+/* ============================================== */
+/* 3. Estrutura (Navbar e Content)                */
+/* ============================================== */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background-color: var(--cor-navbar);
+    border-bottom: 2px solid var(--cor-linha);
+    height: 100px; /* Sua Mudança */
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.logo {
+    height: 80px;
+    width: auto;
+    object-fit: contain;
+}
+
+.nav-links {
+    display: flex;
+    gap: 12px;
+}
+.nav-link {
+    text-decoration: none;
+    color: var(--cor-texto-principal);
+    font-size: 15px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: var(--raio-borda);
+    transition: background-color 0.2s, color 0.2s;
+}
+.nav-link:hover {
+    background-color: var(--cor-fundo);
+}
+
+/* REQUISITO 1: Cor do link ativo */
+.nav-link.active {
+    background-color: var(--cor-texto-principal);
+    color: var(--cor-letra-clara);
+}
+
+.nav-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Imagem de perfil do Google */
+.profile-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-button {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background-color: var(--cor-texto-principal);
+    color: var(--cor-letra-clara);
+    font-weight: bold;
+    font-size: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    overflow: hidden; /* Para a imagem de perfil */
+}
+
+.content-wrapper {
+    max-width: var(--largura-maxima);
+    margin: 24px auto; /* Espaçamento do topo */
+    padding: 0 24px;
+    display: grid;
+    gap: 20px; /* Espaçamento entre os containers */
+}
+
+/* ============================================== */
+/* 4. Estilos da View: Incidentes (Refinada)      */
+/* ============================================== */
+
+/* 1. KPIs */
+.kpi-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+.kpi-card {
+    background-color: var(--cor-kpi-box);
+    color: var(--cor-texto-principal);
+    padding: 16px;
+    border-radius: var(--raio-borda);
+    border: 1px solid var(--cor-linha);
+}
+.kpi-label {
+    display: block;
+    font-size: 16px;
+    opacity: 0.9;
+}
+.kpi-label-lower{
+    font-size: 12px;
+}
+.kpi-value {
+    display: block;
+    font-size: 50px;
+    font-weight: bold;
+}
+
+/* Estilos Específicos do KPI Plantonista (REQ 6) */
+#kpi-plantonista-card {
+    background-color: var(--cor-plantonista-fundo);
+    border-color: var(--cor-plantonista-borda-fonte);
+    color: var(--cor-plantonista-borda-fonte);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px; /* Espaço entre os textos */
+}
+.kpi-value-plantonista {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--cor-plantonista-borda-fonte);
+}
+.kpi-label-plantonista {
+
+    margin: 2px 0px;
+    font-size: 13px;
+    color: var(--cor-plantonista-borda-fonte);
+}
+.kpi-tag-plantonista {
+    background-color: var(--cor-interna-div); /* Fundo branco */
+    border: 1px solid var(--cor-plantonista-borda-fonte);
+    color: var(--cor-plantonista-borda-fonte);
+    padding: 2px 50px;
+    border-radius: var(--raio-borda);
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    align-self: center;
+}
+
+
+/* 2. Filtros */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+    gap: 16px;
+    align-items: flex-end;
+    margin: 20px 0px;
+}
+.form-group {
+    flex: 1;
+    min-width: 150px;
+}
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+.form-group select,
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    background-color: var(--cor-interna-div);
+}
+.btn-primary {
+    background-color: var(--cor-botao-padrao);
+    height: 37px; /* Alinha com os inputs */
+}
+
+/* 3. Agora é um container) */
+.panel-header {
+    display: grid; 
+    gap: 16px; /* Espaço entre o título e a lista de incidentes */
+}
+
+.panel-header-title { 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.panel-header-title h2 { 
+    font-size: 18px;
+    margin: 0;
+}
+.btn-export {
+    background-color: var(--cor-botao-exportar);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.icon-white {
+    height: 20px;
+    width: 25px;
+    filter: brightness(0) invert(1);
+}
+
+/* 4. Incident List Container */
+#incident-list-container {
+    display: grid;
+    gap: 16px; /* Espaço entre os cards de incidente */
+}
+.loading-placeholder {
+    padding: 20px;
+    text-align: center;
+    color: var(--cor-texto-secundario);
+    background-color: var(--cor-interna-div);
+    border: 1px solid var(--cor-linha); /* Adicionado para consistência */
+    border-radius: var(--raio-borda);
+}
+
+/* ============================================== */
+/* 5. Estilo do Card de Incidente                 */
+/* ============================================== */
+.incident-item {
+    background-color: var(--cor-interna-div);
+    border: 1px solid var(--cor-linha); /* Borda padrão */
+    padding: 12px 16px;
+    overflow: hidden; /* Para o status-bar */
+    display: grid;
+    /* Layout de 3 colunas */
+    grid-template-columns: 1fr auto auto;
+    align-items: center; /* Alinha verticalmente */
+    gap: 16px;
+    
+    /* Borda de Status (Barra lateral) */
+    border-left: 6px solid var(--cor-status-aberto); /* Default */
+}
+
+/* Cor da borda esquerda (Barra de Status) */
+.incident-item.status-ABERTO { border-left-color: var(--cor-status-aberto); }
+.incident-item.status-RECONHECIDO { border-left-color: var(--cor-status-ack); }
+.incident-item.status-FECHADO { border-left-color: var(--cor-status-fechado); }
+
+
+/* Coluna 1: Detalhes */
+.incident-details-left {
+    display: grid;
+    gap: 4px;
+}
+.incident-rule-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0;
+}
+
+/* Container para os tags (Prioridade/Status) */
+.incident-meta-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px; /* Espaçamento do título */
+}
+
+/* Estilo do Span de Prioridade */
+.incident-priority {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--raio-borda);
+    border: 1px solid; /* Borda da cor da fonte */
+}
+.incident-priority[data-priority="1"] {
+    background-color: var(--cor-prio-alta-fundo);
+    border-color: var(--cor-status-aberto);
+    color: var(--cor-status-aberto);
+}
+.incident-priority[data-priority="2"] {
+    background-color: var(--cor-prio-media-fundo);
+    border-color: var(--cor-texto-botao-ack);
+    color: var(--cor-texto-botao-ack);
+}
+.incident-priority[data-priority="3"] {
+    background-color: var(--cor-prio-baixa-fundo);
+    border-color: var(--cor-status-fechado);
+    color: var(--cor-status-fechado);
+}
+
+
+.incident-meta,
+.incident-pending {
+    font-size: 13px;
+    color: var(--cor-texto-secundario);
+}
+
+/* Coluna 2: Comentário */
+.incident-comment-middle .comment-input {
+    margin-top: 0; /* Remove o margin-top padrão do textarea */
+    min-width: 250px; /* Largura mínima */
+}
+
+/* Coluna 3: Botões */
+.incident-actions-right {
+    display: grid;
+    gap: 8px; /* Espaço entre os botões */
+    align-content: center;
+}
+
+.btn-action {
+    font-size: 13px;
+    font-weight: 600;
+    width: 150px; /* Sua Mudança (Largura fixa) */
+    text-align: center;
+}
+.btn-ack {
+    background-color: var(--cor-botao-ack);
+    color: var(--cor-texto-botao-ack);
+}
+.btn-close {
+    background-color: var(--cor-botao-close);
+    color: var(--cor-letra-clara);
+}
+
+/* Responsividade (Minha versão, ajustada para sua estrutura) */
+@media (max-width: 768px) {
+    .incident-item {
+        /* Empilha as 3 colunas em telas pequenas */
+        grid-template-columns: 1fr;
+    }
+    .incident-actions-right {
+        /* Botões ficam lado a lado em telas pequenas */
+        display: flex;
+        flex-direction: row;
+    }
+    .btn-action {
+        flex: 1; /* Ocupam espaço igual */
+        width: auto; /* Remove a largura fixa */
+    }
+    .incident-comment-middle .comment-input {
+        min-width: 100%; /* Ocupa largura total */
+    }
+}
+
+
+/* ============================================== */
+/* 6. Mensagens                                   */
+/* ============================================== */
+.message-area {
+    position: sticky;
+    top: 100px; /*  Ajustado para sua navbar de 100px */
+    z-index: 9; /* Fica abaixo da navbar (10), mas acima do resto */
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%; /* Ocupa o espaço no grid */
+    
+    max-height: 200px;
+    overflow-y: auto;
+}
+.msg {
+    padding: 12px 16px;
+    border-radius: var(--raio-borda);
+    font-weight: 500;
+    border: 1px solid;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Sombra sutil para pop-ups */
+    transition: opacity 0.5s;
+}
+.msg.success {
+    background: #e6f7ec;
+    border-color: #b7e1c7;
+    color: #0f5132;
+}
+.msg.error {
+    background: #fdebee;
+    border-color: #f5c6cb;
+    color: #842029;
+}
+
+/* ============================================== */
+/* 7. Estilos da Tela de Login (RF01)      */
+/* ============================================== */
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 100vh;
+    padding: 24px;
+}
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+.logo-login {
+    height: 100px;
+    margin-bottom: 12px;
+}
+.login-card h2 {
+    font-size: 20px;
+}
+.login-card p {
+    color: var(--cor-texto-secundario);
+    font-size: 14px;
+    text-align: center;
+}
+.btn-login-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background-color: #FFFFFF;
+    color: #333;
+    border: 1px solid var(--cor-linha);
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    margin-top: 12px;
+}
+.btn-login-google:hover {
+    background-color: #f9f9f9;
+}
+.login-status-text {
+    font-size: 12px;
+    color: var(--cor-texto-secundario);
+    height: 16px; /* Para evitar pulo de layout */
+}
+
+/* Botão de Logout */
+.btn-logout {
+    background-color: var(--cor-status-aberto);
+    color: var(--cor-letra-clara);
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+/* ============================================== */
+/* 8. Estilos da Tabela de Regras e Modal         */
+/* ============================================== */
+
+/* Tabela Customizada */
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+}
+
+.custom-table thead {
+    background-color: #2C5132; /* Verde Escuro do Print */
+    color: white;
+}
+
+.custom-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.custom-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #eee;
+    color: var(--cor-texto-principal);
+    vertical-align: middle;
+}
+
+.custom-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Badges (Pílulas) */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 80px;
+    border: 1px solid transparent;
+}
+
+/* Cores de Prioridade (Fundo Pastel + Borda/Texto Forte) */
+.badge-prio-1 { background: #F7CDCD; color: #761818; border-color: #761818; } /* Alta */
+.badge-prio-2 { background: #F9F9DB; color: #9C7F00; border-color: #F3C810; } /* Média */
+.badge-prio-3 { background: #EBEBEB; color: #2C5132; border-color: #8CB395; } /* Baixa */
+
+/* Cores de Status */
+.badge-status-ativa { background: #E6E6FA; color: #4B0082; border-color: #4B0082; } /* Azulado/Roxo */
+.badge-status-adiada { background: #FFFBE8; color: #F3C810; border-color: #F3C810; } /* Amarelo */
+.badge-status-silenciada { background: #DDD; color: #666; border-color: #999; } /* Cinza */
+
+/* Botões de Ação na Tabela */
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 4px;
+    font-size: 16px;
+}
+.action-btn:hover { transform: scale(1.1); }
+
+/* Botão (+) Flutuante no Header da Tabela */
+.btn-add-floating {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: transparent;
+    border: 1px solid white;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.btn-add-floating:hover { background: rgba(255,255,255,0.2); }
+
+/* --- MODAL STYLES --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-card {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    max-height: 90vh; 
+    overflow-y: auto;
+}
+
+.modal-header {
+    background-color: #2C5132;
+    color: white;
+    padding: 16px 24px;
+}
+.modal-header h3 { margin: 0; font-size: 18px; }
+
+.modal-body { padding: 24px; }
+
+.modal-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    position: sticky; /* Sticky em vez de fixed para evitar que saia do modal */
+    bottom: 0;
+    z-index: 10;
+    /* Garante que o footer tenha um fundo que cubra o conteúdo */
+    background-color: white; 
+    border-top: 1px solid var(--cor-linha);
+    padding: 12px 24px; /* Adiciona padding vertical e horizontal */
+    
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-confirm {
+    background-color: #761818; /* Vermelho/Bordo do print */
+    color: white;
+    padding: 10px 24px;
+    border-radius: 6px;
+}
+.btn-cancel {
+    background-color: #2C5132; /* Verde escuro do print */
+    color: white;
+    padding: 10px 24px;
+    border-radius: 6px;
+}
+
+/* Botão (+) Flutuante no Header da Tabela */
+.btn-add-floating {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: transparent;
+    border: 1px solid white;
+    color: white; /* Cor do texto (não mais necessário se usar SVG) */
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 20px; /* Não mais necessário se usar SVG */
+    line-height: 1; /* Não mais necessário se usar SVG */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.btn-add-floating:hover { background: rgba(255,255,255,0.2); }
+
+/* Ajuste para ícones SVG dentro dos botões */
+.action-btn img {
+    width: 16px; /* Ajuste o tamanho conforme desejar */
+    height: 16px;
+    vertical-align: middle; /* Alinha o ícone no meio do texto se houver */
+}
+
+/* --- MODAL STYLES --- */
+/* ... (seu modal-overlay e modal-card anterior) ... */
+
+.modal-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    /* Adicione flex-wrap para quebrar em telas menores e align-items para centralizar verticalmente */
+    flex-wrap: wrap; 
+    align-items: center;
+}
+
+/* ============================================== */
+/* 9. Ajustes de Refatoração (HTML Limpo)         */
+/* ============================================== */
+
+/* --- Barra de Filtros --- */
+.filter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.filter-group-select {
+    flex: 0 0 200px; /* Largura fixa de 200px */
+}
+
+.filter-group-search {
+    flex: 0 0 300px; /* Largura fixa de 300px */
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding-right: 35px; /* Espaço para a lupa */
+}
+
+.search-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%); /* Centraliza verticalmente exato */
+    width: 16px;
+    height: 16px;
+    opacity: 0.5; /* Deixa cinza suave */
+    pointer-events: none; /* O clique passa através do ícone */
+}
+
+/* --- Tabela e Botão Flutuante --- */
+.table-container {
+    padding: 0;
+    overflow: hidden;
+    margin-top: 20px;
+    position: relative;
+}
+
+.btn-add-floating {
+    position: absolute;
+    top: 10px; /* Ajuste fino vertical */
+    right: 10px; /* Ajuste fino horizontal */
+    z-index: 5;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.btn-add-floating:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* TRUQUE PARA DEIXAR O SVG BRANCO */
+.btn-add-floating img {
+    width: 24px;
+    height: 24px;
+    display: block;
+    filter: brightness(0) invert(1); /* Transforma qualquer cor em Branco */
+}
+
+/* Ajuste das Colunas da Tabela */
+.col-name { width: 30%; }
+.col-freq { width: 20%; }
+.col-prio { width: 15%; text-align: center; }
+.col-status { width: 15%; text-align: center; }
+
+/* AQUI RESOLVE A SOBREPOSIÇÃO */
+.col-actions { 
+    width: 20%; 
+    text-align: right; 
+    padding-right: 50px !important; /* Empurra o texto "Ações" para a esquerda, longe do botão */
+}
+
+/* --- Modal (Classes para remover inline styles) --- */
+.modal-col-layout {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start; /* Alinha labels à esquerda */
+}
+
+/* Alinha a coluna direita no grid (SQL) */
+.modal-col-right {
+    grid-column: 2 / 3;
+    /* Adicione max-width para garantir que não force o grid em telas médias */
+    max-width: 100%; 
+}
+
+.modal-full-width {
+    width: 100%;
+}
+
+.date-range-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+}
+
+.input-date-responsive {
+    flex-grow: 1;
+    min-width: 140px; /* Garante que não fique muito pequeno */
+}
+
+/* ============================================== */
+/* 10. Estilos do Modal de Confirmação (Custom)   */
+/* ============================================== */
+
+.modal-confirm-card {
+    max-width: 400px;         /* Mais estreito que o formulário */
+    width: 100%;              /* Responsivo */
+    border-radius: 12px;      /* Bordas bem arredondadas */
+    overflow: hidden;         /* Garante que nada saia do card */
+    background-color: white;  /* Fundo branco */
+}
+
+.modal-confirm-body {
+    text-align: center;       /* Centraliza tudo */
+    padding: 30px 20px;       /* Espaçamento interno generoso */
+}
+
+.modal-confirm-title {
+    color: #761818;           /* Vermelho/Bordo */
+    margin-bottom: 15px;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 0;
+}
+
+.modal-confirm-text {
+    color: var(--cor-texto-principal);
+    margin-bottom: 25px;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.modal-confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;                /* Espaço entre os botões */
+}
+
+.btn-modal-action {
+    width: 120px;             /* Largura fixa para ficarem iguais */
+    height: 40px;             /* Altura confortável */
+    font-size: 14px;
+}
+
+/* ============================================== */
+/* 11. Estilos do Modal de Regra (CRUD)           */
+/* ============================================== */
+
+.modal-regra-card {
+    max-width: 900px; /* Mantido, mas ajustado para a largura máxima da tela */
+    width: 90%; /* Garante que ele use 90% da largura da viewport */
+}
+
+.regra-form-grid {
+    display: grid;
+    /* Duas colunas: Detalhes e SQL */
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 30px;
+}
+
+/* Alinha a coluna direita no grid (SQL) */
+.modal-col-right {
+    grid-row: 1 / span 5; /* Ocupa as 5 primeiras linhas do grid */
+    grid-column: 2 / 3;
+}
+
+/* Campos de entrada com unidades */
+.modal-regra-input-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 0;
+}
+.modal-regra-input-row .form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column; /* Coloca label em cima */
+}
+.modal-regra-input-row input {
+    /* Ajusta o input para caber a unidade */
+    padding-right: 60px; 
+}
+.input-unit {
+    position: relative;
+    top: -30px; /* Sobe para o input */
+    align-self: flex-end;
+    margin-right: 10px;
+    font-size: 12px;
+    color: var(--cor-texto-secundario);
+    pointer-events: none;
+}
+
+/* Campo de Tempo de Execução */
+.time-range-group {
+    margin-top: 4px; /* Espaço da label */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.time-range-group input {
+    width: 100px; /* Largura fixa para campos de tempo */
+    flex-grow: 0;
+}
+
+/* Estilo do Botão Testar Regra (Azul escuro) */
+.btn-testar-regra {
+    background-color: #214CA9; /* Cor de exportar para manter a consistência */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: fit-content;
+    margin-top: 20px;
+    padding: 10px 24px;
+}
+
+/* Cor do Ícone de Testar Regra (dropbox-logo.svg) */
+/* Este é o ajuste crítico para o ícone preto */
+.icon-white-no-invert {
+    height: 20px;
+    width: 20px;
+    /* Simplesmente define a cor branca para o ícone.
+       Se for um SVG PRETO, filter: invert(1) ou brightness(0) invert(1) é o ideal.
+       Usaremos 'brightness(0) invert(1)' que é mais robusto para SVGs.
+    */
+    filter: brightness(0) invert(1); 
+}
+
+/* Switch (para o campo Notificação) */
+.modal-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    margin-bottom: 10px;
+}
+.modal-switch label {
+    margin: 0;
+}
+/* Estilo básico de toggle/switch */
+.modal-switch input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 40px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--cor-status-fechado); /* Cinza (Desligado) */
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border: none;
+}
+.modal-switch input[type="checkbox"]:checked {
+    background: var(--cor-botao-close); /* Verde (Ligado) */
+}
+.modal-switch input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.3s;
+}
+.modal-switch input[type="checkbox"]:checked::before {
+    transform: translateX(20px);
+}
+
+
+/* Responsividade do Modal de Regra */
+@media (max-width: 850px) {
+    .regra-form-grid {
+        /* Empilha as colunas em telas menores */
+        grid-template-columns: 1fr;
+    }
+    .modal-col-right {
+        /* Restaura o fluxo normal na coluna 1 */
+        grid-row: auto;
+        grid-column: auto;
+    }
+    .modal-regra-input-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

@@ -38,4 +38,10 @@ router.delete("/:id",
     RegrasController.deleteRegra
 );
 
+// POST /regras/testar (Teste Sandbox)
+router.post("/testar", 
+    checkPermission(R_REGRAS, P_ADMIN_OP), 
+    RegrasController.testarRegra
+);
+
 module.exports = router;

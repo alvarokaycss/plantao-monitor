@@ -31,7 +31,7 @@ app.use("/incidentes", incidentesRoutes);
 app.use("/kpis", kpiRoutes);
 app.use("/regras", regrasRoutes);
 app.use("/usuarios", usuariosRoutes);
-app.use("/escalas", escalasRoutes); // CORRIGIDO: Adicionada a barra inicial (/)
+app.use("/escalas", escalasRoutes);
 
 // Configurações básicas e de verificação de variáveis ambiente
 const PORT = process.env.PORT || 8000;

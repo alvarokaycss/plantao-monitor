@@ -202,3 +202,35 @@ exports.deleteRegra = async (req, res) => {
         res.status(500).json({ error: "Erro interno ao excluir regra." });
     }
 };
+
+/**
+ * POST /regras/testar
+ * Executa a consulta SQL em modo sandbox.
+ */
+exports.testarRegra = async (req, res) => {
+    const { id_banco_dados, consulta_sql } = req.body || {};
+
+    // 1. Validação
+    const idBancoVal = asInteger(id_banco_dados);
+    if (!idBancoVal || !consulta_sql) {
+        return res.status(400).json({ error: "id_banco_dados e consulta_sql são obrigatórios." });
+    }
+
+    try {
+        // 2. Chamada ao Service
+        const resultado = await RegrasService.testarConsultaSql(consulta_sql, idBancoVal);
+
+        // 3. Resposta
+        if (resultado.status === "ERRO") {
+            // Retorna 400 Bad Request se a SQL falhar
+            return res.status(400).json({ error: "Erro na consulta SQL: " + resultado.error });
+        }
+        
+        // Retorna o resultado do teste
+        res.json(resultado);
+
+    } catch (error) {
+        console.error("Erro interno ao testar regra:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao processar o teste." });
+    }
+};

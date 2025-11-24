@@ -46,9 +46,9 @@ exports.selectUsuariosFiltrados = async (filtros = {}) => {
 }
 
 /**
- * Busca os detalhes de um usuário, incluindo suas configurações de notificação.
+ * Busca os detalhes de um usuário, incluindo suas configurações de notificação E RECURSOS.
  * @param {number} idUsuarioVal - ID do usuário (próprio ou alvo do Admin).
- * @returns {object} - { info: user, configuracoes: [] }.
+ * @returns {object} - { info: user, configuracoes: [], recursos: [] }.
  */
 exports.getUsuarioDetalhes = async (idUsuarioVal) => {
     const client = await pool.connect();
@@ -70,7 +70,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
         }
         const usuario = userRes.rows[0];
 
-        // Query 2: Buscar as configurações de notificação (para os toggles)
+        // Query 2: Buscar as configurações de notificação (canais)
         const configQuery = `
             SELECT 
                 c.id_configuracao_notificacao, 
@@ -85,10 +85,24 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
             ORDER BY t.nome;
         `;
         const configRes = await client.query(configQuery, [idUsuarioVal]);
+        
+        // NOVO: Query 3: Buscar os recursos associados (toggles de tela)
+        const recursosQuery = `
+            SELECT 
+                ur.id_recurso,
+                r.chave_recurso,
+                r.nome_amigavel
+            FROM ${SCHEMA}.usuario_recursos ur
+            JOIN ${SCHEMA}.recursos r ON ur.id_recurso = r.id_recurso
+            WHERE ur.id_usuario = $1;
+        `;
+        const recursosRes = await client.query(recursosQuery, [idUsuarioVal]);
+
 
         return {
             info: usuario,
-            configuracoes: configRes.rows 
+            configuracoes: configRes.rows,
+            recursos: recursosRes.rows // RETORNA OS RECURSOS AQUI!
         };
 
     } finally {

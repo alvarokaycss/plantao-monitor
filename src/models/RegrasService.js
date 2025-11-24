@@ -309,3 +309,59 @@ exports.deleteRegra = async (idRegraVal) => {
         if (client) client.release();
     }
 };
+
+/**
+ * Executa uma consulta SQL em modo de teste (Sandbox).
+ * @param {string} consultaSql - A consulta SQL a ser executada.
+ * @param {number} idBancoDados - ID do banco de dados alvo.
+ * @returns {object} - Resultado do teste (rowCount, rows, error).
+ */
+exports.testarConsultaSql = async (consultaSql, idBancoDados) => {
+    let client;
+    let bancoInfo;
+
+    try {
+        // 1. Encontrar o banco de dados
+        client = await pool.connect();
+        
+        const bancoQuery = `
+            SELECT * FROM ${SCHEMA}.banco_dados 
+            WHERE id_banco_dados = $1;
+        `;
+        const { rows } = await client.query(bancoQuery, [idBancoDados]);
+        
+        if (rows.length === 0) {
+            return { error: `Banco de dados ID ${idBancoDados} não encontrado.` };
+        }
+        bancoInfo = rows[0];
+
+        // 2. Validação de Segurança (Bloqueio de DML/DDL) - RF05
+        const sqlLimpo = consultaSql.trim().toUpperCase();
+        if (/(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)/.test(sqlLimpo)) {
+            return { error: "Consulta inválida. Apenas consultas SELECT são permitidas no teste." };
+        }
+
+        // 3. Execução da Consulta (Usamos um SELECT * para teste)
+        // Adicionamos um LIMIT 10 para evitar consultas muito pesadas no teste.
+        const queryTeste = `SELECT * FROM (${consultaSql}) AS teste_query LIMIT 10;`;
+        
+        const resultado = await client.query(queryTeste);
+
+        // 4. Retorno de Sucesso
+        return {
+            rowCount: resultado.rowCount,
+            rows: resultado.rows,
+            status: "SUCESSO"
+        };
+
+    } catch (error) {
+        // 5. Retorno de Erro SQL
+        console.error("Erro na execução do teste SQL:", error);
+        return {
+            error: error.message,
+            status: "ERRO"
+        };
+    } finally {
+        if (client) client.release();
+    }
+};

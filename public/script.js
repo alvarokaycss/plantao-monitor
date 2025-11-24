@@ -50,7 +50,7 @@ const ui = {
     // Template
     incidentTemplate: document.getElementById('incident-item-template'),
 
-regras: {
+    regras: {
         view: document.getElementById('view-regras'),
         tbody: document.getElementById('regras-list-body'),
         filterPrioridade: document.getElementById('regras-filter-prioridade'),
@@ -76,13 +76,45 @@ regras: {
         campoJanelaFim: document.getElementById('regra-fim'),
         campoPrioridade: document.getElementById('regra-prioridade'),
         campoBanco: document.getElementById('regra-banco'),
-        campoRoles: document.getElementById('regra-roles'),
+        rolesContainer: document.getElementById('regra-roles-container'),
         campoSqL: document.getElementById('regra-sql'),
         campoNotificacao: document.getElementById('regra-notificacao'),
         campoResultado: document.getElementById('regra-resultado'),
         btnTestar: document.getElementById('btn-testar-regra')
+    },
+    
+    // NOVOS ELEMENTOS PARA VIEW DE USUÁRIOS
+    usuarios: {
+        view: document.getElementById('view-usuarios'),
+        tbody: document.getElementById('usuarios-list-body'),
+        filterPerfil: document.getElementById('usuarios-filter-perfil'),
+        search: document.getElementById('usuarios-search'),
+        addBtn: document.getElementById('btn-add-usuario'),
+        
+        // Modal de Configuração
+        modal: document.getElementById('modal-usuario-config'),
+        form: document.getElementById('form-usuario-config'),
+        title: document.getElementById('modal-usuario-title'),
+        infoEmail: document.getElementById('usuario-info-email'),
+        usuarioId: document.getElementById('usuario-id'),
+        
+        campoPerfil: document.getElementById('config-perfil'),
+        campoAtivo: document.getElementById('config-ativo'),
+        recursosContainer: document.getElementById('config-recursos-container'),
+        notificacaoContainer: document.getElementById('config-notificacao-container'),
+        
+        btnCancel: document.getElementById('btn-cancel-usuario')
     }
 };
+
+// Variáveis Globais para Cache de Dados Auxiliares e Filtros
+let regrasCache = []; 
+let bancosCache = []; 
+let rolesCache = []; 
+let perfisCache = []; 
+let recursosCache = []; 
+let tiposCanalCache = [];
+
 
 // ==============================================
 // FUNÇÕES HELPER DA INTERFACE DE USUÁRIO
@@ -214,6 +246,19 @@ function init() {
     ui.incidentes.filterBtn.addEventListener('click', () => {
         loadIncidentesView(); // Recarrega a view com os filtros aplicados
     });
+    
+    // 3.1 Configura filtros e listeners iniciais da tela de Usuários
+    if (ui.usuarios.search) {
+        ui.usuarios.search.onkeyup = () => loadUsuariosView();
+    }
+    if (ui.usuarios.filterPerfil) {
+        ui.usuarios.filterPerfil.onchange = () => loadUsuariosView();
+    }
+    // Listeners do modal de Usuários (adicionados aqui para garantir que existam no DOM)
+    ui.usuarios.addBtn.onclick = () => openUsuarioModal('new');
+    ui.usuarios.btnCancel.onclick = closeUsuarioModal;
+    ui.usuarios.form.onsubmit = handleUsuarioSubmit;
+    
 
     // 4. Configura botões de Login/Logout
     ui.loginButton.addEventListener('click', handleLogin);
@@ -222,22 +267,81 @@ function init() {
     // 5. Inicia o listener de autenticação
     setupAuthListener();
 
-    // 6. Configura botões do CRUD de Regras
+    // 6. Configura botões do CRUD de Regras (Já existia)
     ui.regras.addBtn.addEventListener('click', () => openRegraModal('new'));
     ui.regras.btnCancelCrud.addEventListener('click', closeRegraModal);
     ui.regras.crudForm.addEventListener('submit', handleRegraSubmit);
     
-    // Configura o Testar Regra (Placeholder por enquanto)
+    // Configura o Testar Regra (RF17)
     ui.regras.btnTestar.addEventListener('click', handleTestarRegra);
-    
-    // (Ainda precisamos de uma função para adicionar os listeners de edição na tabela)
 }
 
 /**
- * Função placeholder para o RF17
+ * Função para o RF17: Testa a consulta SQL em modo sandbox.
  */
-function handleTestarRegra() {
-    showMessage('Funcionalidade de Testar Regra (RF17) ainda não implementada.', 'error');
+async function handleTestarRegra() {
+    const btn = ui.regras.btnTestar;
+    const originalText = btn.textContent;
+
+    btn.disabled = true;
+    btn.textContent = 'Testando...';
+    ui.regras.campoResultado.value = ''; // Limpa o campo de resultado
+    
+    // 1. Coleta os dados necessários
+    const id_banco_dados = ui.regras.campoBanco.value;
+    const consulta_sql = ui.regras.campoSqL.value.trim();
+
+    if (!id_banco_dados || !consulta_sql) {
+        showMessage('Selecione um Banco de Dados e preencha a Query SQL.', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+    }
+    
+    // 2. Monta o payload
+    const payload = {
+        id_banco_dados: Number(id_banco_dados),
+        consulta_sql: consulta_sql
+    };
+
+    try {
+        // 3. Chama o novo endpoint de teste
+        const resultado = await fetchApi(`/regras/testar`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        // 4. Trata o resultado (SUCESSO)
+        let output = `[SUCESSO] Consulta validada. Linhas encontradas: ${resultado.rowCount}\n\n`;
+        
+        if (resultado.rowCount > 0) {
+            output += "Amostra (Primeiras 10 linhas):\n";
+            // Formata o header da tabela (nomes das colunas)
+            const headers = Object.keys(resultado.rows[0]);
+            output += headers.join(' | ') + '\n';
+            output += '-'.repeat(headers.join(' | ').length) + '\n';
+            
+            // Adiciona as linhas (amostra limitada a 10)
+            resultado.rows.slice(0, 10).forEach(row => {
+                output += headers.map(header => String(row[header])).join(' | ') + '\n';
+            });
+        } else {
+            output += "Nenhum resultado retornado pela consulta.";
+        }
+
+        ui.regras.campoResultado.value = output;
+        showMessage('Teste de regra executado com sucesso!', 'success');
+
+    } catch (error) {
+        // 5. Trata o erro (FALHA SQL ou de API)
+        const errorMessage = error.message.replace('Falha na API: Bad Request: ', '');
+        ui.regras.campoResultado.value = `[ERRO] Falha na execução da Query:\n${errorMessage}`;
+        showMessage('Erro ao testar regra. Verifique a sintaxe da SQL.', 'error');
+
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
 /**
@@ -354,6 +458,9 @@ async function navigateTo(viewName) {
                 break;
             case 'regras':
                 await loadRegrasView();
+                break;
+            case 'usuarios': // NOVO
+                await loadUsuariosView();
                 break;
             // Outras views (próximas etapas)
         }
@@ -702,12 +809,8 @@ function showMessage(text, type = 'success') {
 }
 
 // ============================
-// LÓGICA DA VIEW: REGRAS (RF05/RF18)
+// LÓGICA DA VIEW: REGRAS (RF05/RF18/RF17)
 // ============================
-
-let regrasCache = []; // Armazena as regras localmente para filtrar sem ir na API
-let bancosCache = []; // Novo cache para bancos
-let rolesCache = []; // Novo cache para roles
 
 async function loadRegrasView() {
     ui.regras.tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Carregando...</td></tr>';
@@ -750,11 +853,11 @@ function renderRegrasTable(listaRegras) {
         let actionIconHtml = '';
         if (status === 'Ativa') {
             // Botão Engrenagem (Configurar)
-            actionIconHtml = `<button class="action-btn btn-config" title="Programar Ação" onclick="openAcaoModal(${regra.id_regra})"><img src="/gear.svg" alt="Programar"></button>`;
+            actionIconHtml = `<button class="action-btn btn-config" title="Programar Ação" onclick="openAcaoModal(${regra.id_regra})"><img src="./gear.svg" alt="Programar"></button>`;
         } else {
             // Botão X (Cancelar Ação)
             actionIconHtml = `<button class="action-btn btn-cancel-schedule" title="Cancelar Programação" onclick="cancelarProgramacao(${regra.id_regra})">
-                                <img src="/x.svg" alt="Cancelar" style="width: 16px; height: 16px;">
+                                <img src="./x.svg" alt="Cancelar" style="width: 16px; height: 16px;">
                               </button>`;
         }
 
@@ -769,10 +872,10 @@ function renderRegrasTable(listaRegras) {
             </td>
             <td style="text-align: left;">
                 <button class="action-btn" title="Editar" onclick="openRegraModal(${regra.id_regra})">
-                    <img src="/pencil-simple-line.svg" alt="Editar">
+                    <img src="./pencil-simple-line.svg" alt="Editar">
                 </button>
                 <button class="action-btn" title="Excluir" onclick="deleteRegra(${regra.id_regra})">
-                    <img src="/trash.svg" alt="Excluir">
+                    <img src="./trash.svg" alt="Excluir">
                 </button>
                 ${actionIconHtml}
             </td>
@@ -812,7 +915,7 @@ function setupRegrasFilters() {
 }
 
 /**
- * Busca dados auxiliares (Bancos, Roles) e preenche os selects.
+ * Busca dados auxiliares (Bancos, Roles) e preenche os selects/checkboxes.
  */
 async function setupRegraForm() {
     // Se já estiver cacheado, não busca de novo
@@ -827,28 +930,17 @@ async function setupRegraForm() {
         bancosCache = bancos;
         rolesCache = roles;
 
-        // 1. Popular Bancos
+        // 1. Popular Bancos (Select)
         const selectBanco = ui.regras.campoBanco;
         selectBanco.innerHTML = '';
         bancos.forEach(b => {
             const opt = document.createElement('option');
             opt.value = b.id_banco_dados;
-            // Usamos a coluna 'tipo_banco' para o display (ex: 'oracle', 'postgres')
             opt.textContent = b.tipo_banco; 
             selectBanco.appendChild(opt);
         });
-
-        // 2. Popular Roles
-        const selectRoles = ui.regras.campoRoles;
-        selectRoles.innerHTML = '';
-        roles.forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r.id_role;
-            opt.textContent = r.nome;
-            selectRoles.appendChild(opt);
-        });
         
-        // 3. Popular Prioridades (Hardcoded, pois são fixas)
+        // 2. Popular Prioridades (Select)
         const selectPrioridade = ui.regras.campoPrioridade;
         selectPrioridade.innerHTML = '';
         [
@@ -860,6 +952,18 @@ async function setupRegraForm() {
             opt.value = p.id;
             opt.textContent = p.nome;
             selectPrioridade.appendChild(opt);
+        });
+
+        // 3. Popular Roles (Checkboxes)
+        const rolesContainer = ui.regras.rolesContainer;
+        rolesContainer.innerHTML = '';
+        roles.forEach(r => {
+            const label = document.createElement('label');
+            label.innerHTML = `
+                <input type="checkbox" name="roles" value="${r.id_role}">
+                ${r.nome}
+            `;
+            rolesContainer.appendChild(label);
         });
 
     } catch (error) {
@@ -1053,6 +1157,9 @@ window.openRegraModal = async (modeOrId) => {
     
     const isEditing = modeOrId !== 'new';
     
+    // 3. Desmarca todos os checkboxes antes de preencher
+    ui.regras.rolesContainer.querySelectorAll('input[type="checkbox"]').forEach(chk => chk.checked = false);
+
     if (isEditing) {
         // Modo Edição
         const idRegra = Number(modeOrId);
@@ -1074,23 +1181,18 @@ window.openRegraModal = async (modeOrId) => {
             ui.regras.campoBanco.value = regraDetalhes.info.id_banco_dados || '';
             ui.regras.campoSqL.value = regraDetalhes.info.consulta_sql || '';
             
-            // 🚨 NOTA: Preencher os Roles selecionados requer uma API GET /regras/:id/roles 
-            // ou atualizar o endpoint GET /regras/:id/detalhes para incluir os IDs das roles.
-            // Por enquanto, deixaremos de fora, ou o POST/PUT de regra pode falhar se não houver roles.
-            // O POST/PUT de regra *exige* roles.
-            // Vou atualizar o fetchApi de regras (no final desta resposta) para incluir os roles.
-            // Para o front, vou assumir que o `regrasCache` foi carregado com os roles.
             
-            // 🚨 Atualização: O Backend POST/PUT de Regra exige o array de Roles.
-            // O endpoint GET /regras/:id/detalhes *não* retorna as Roles. 
-            // Isso *quebra* a edição! Precisamos retornar Roles no `GET /regras/:id/detalhes` ou criar um endpoint. 
-            // Por simplificação (e para manter o PUT funcionando), farei o seguinte: 
-            // 1. Assumo que a Regra carregada em `loadRegrasView` tem o campo `roles_id` (Array de IDs).
+            // Lógica de pré-seleção dos Checkboxes:
             const regraDaLista = regrasCache.find(r => r.id_regra == idRegra);
             if(regraDaLista && regraDaLista.roles_id && Array.isArray(regraDaLista.roles_id)) {
-                // Seleciona as opções no multi-select
-                Array.from(ui.regras.campoRoles.options).forEach(opt => {
-                    opt.selected = regraDaLista.roles_id.includes(Number(opt.value));
+                
+                const selectedRoleIds = regraDaLista.roles_id.map(String); // Converte para string para comparação
+                
+                ui.regras.rolesContainer.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                    // Verifica se o valor do checkbox está na lista de roles_id da regra
+                    if (selectedRoleIds.includes(chk.value)) {
+                        chk.checked = true;
+                    }
                 });
             }
 
@@ -1137,10 +1239,9 @@ async function handleRegraSubmit(e) {
     const idRegra = ui.regras.regraId.value;
     const isEditing = idRegra > 0;
     
-    // Array de IDs de roles selecionadas
-    const selectedRoles = Array.from(ui.regras.campoRoles.options)
-        .filter(option => option.selected)
-        .map(option => Number(option.value));
+    // Array de IDs de roles selecionadas (lendo checkboxes)
+    const selectedRoles = Array.from(ui.regras.rolesContainer.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(chk => Number(chk.value));
         
     if (selectedRoles.length === 0) {
         showMessage('Selecione pelo menos uma Role para a regra.', 'error');
@@ -1193,6 +1294,338 @@ async function handleRegraSubmit(e) {
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Salvar';
+    }
+}
+
+// ============================
+// LÓGICA DA VIEW: USUÁRIOS (RF03/RF02/RF04)
+// ============================
+
+/**
+ * Carrega a lista de usuários e dados auxiliares (perfis, recursos, canais).
+ */
+async function loadUsuariosView() {
+    ui.usuarios.tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Carregando...</td></tr>';
+
+    try {
+        // 1. Busca dados auxiliares
+        await setupUsuarioFormCaches();
+
+        // 2. Busca lista de usuários
+        const data = await fetchUsuarios();
+        renderUsuariosTable(data);
+        
+    } catch (error) {
+        console.error("Erro ao carregar usuários:", error);
+        ui.usuarios.tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Erro ao carregar lista de usuários.</td></tr>';
+    }
+}
+
+/**
+ * Busca a lista de usuários com filtros.
+ */
+async function fetchUsuarios() {
+    const id_perfil = ui.usuarios.filterPerfil.value;
+    const pesquisa = ui.usuarios.search.value;
+
+    const params = new URLSearchParams();
+    if (id_perfil) params.append('id_perfil', id_perfil);
+    if (pesquisa) params.append('pesquisa', pesquisa);
+
+    return fetchApi(`/usuarios?${params.toString()}`);
+}
+
+/**
+ * Popula caches de dados auxiliares (Perfis, Recursos, Tipos de Canal).
+ */
+async function setupUsuarioFormCaches() {
+    // Se já tiver todos os caches, retorna
+    if (perfisCache.length > 0 && recursosCache.length > 0 && tiposCanalCache.length > 0) return;
+
+    try {
+        const [perfis, recursos, tiposCanal] = await Promise.all([
+            fetchApi('/perfis'),
+            fetchApi('/recursos'),
+            fetchApi('/tipos_canal_notificacao')
+        ]);
+        
+        perfisCache = perfis;
+        recursosCache = recursos;
+        tiposCanalCache = tiposCanal;
+        
+        // Popula o filtro de perfis (Dropdown)
+        const selectFilter = ui.usuarios.filterPerfil;
+        selectFilter.innerHTML = '<option value="">Perfil: Todos</option>';
+        perfis.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id_perfil;
+            opt.textContent = p.nome;
+            selectFilter.appendChild(opt);
+        });
+
+    } catch (e) {
+        console.error("Falha ao carregar caches de Usuários:", e);
+        showMessage('Falha ao carregar dados de Perfil/Recursos.', 'error');
+        throw e;
+    }
+}
+
+
+/**
+ * Renderiza a tabela de usuários.
+ */
+function renderUsuariosTable(listaUsuarios) {
+    const tbody = ui.usuarios.tbody;
+    tbody.innerHTML = '';
+    
+    if (listaUsuarios.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhum usuário encontrado.</td></tr>';
+        return;
+    }
+
+    listaUsuarios.forEach(user => {
+        const tr = document.createElement('tr');
+        // Busca o nome do perfil no cache
+        const perfil = perfisCache.find(p => p.id_perfil === user.id_perfil);
+        const perfilNome = perfil ? perfil.nome : 'N/A';
+        const statusText = user.ativo ? 'Ativo' : 'Inativo';
+        const statusClass = user.ativo ? 'badge-status-ativa' : 'badge-status-silenciada';
+        
+        tr.innerHTML = `
+            <td>${user.nome || '--'}</td>
+            <td>${user.email || '--'}</td>
+            <td>${perfilNome}</td>
+            <td style="text-align: left;">
+                <span class="badge ${statusClass}">${statusText}</span>
+            </td>
+            <td style="text-align: left;">
+                <button class="action-btn" title="Configurar" onclick="openUsuarioModal(${user.id_usuario})">
+                    <img src="./gear.svg" alt="Configurar">
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Abre o modal de edição/configuração de usuário.
+ */
+window.openUsuarioModal = async (modeOrId) => {
+    // 1. Limpar formulário e containers
+    ui.usuarios.form.reset();
+    ui.usuarios.recursosContainer.innerHTML = '';
+    ui.usuarios.notificacaoContainer.innerHTML = '';
+    ui.usuarios.usuarioId.value = '';
+    
+    const isEditing = modeOrId !== 'new';
+    
+    // 2. Popular dropdowns auxiliares (Perfis)
+    const selectPerfil = ui.usuarios.campoPerfil;
+    selectPerfil.innerHTML = '';
+    perfisCache.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id_perfil;
+        opt.textContent = p.nome;
+        selectPerfil.appendChild(opt);
+    });
+
+    if (isEditing) {
+        const idUsuario = Number(modeOrId);
+        ui.usuarios.title.textContent = 'Configurar Usuário Existente';
+        
+        try {
+            // Busca detalhes do usuário (inclui recursos e notificações)
+            const data = await fetchApi(`/usuarios/${idUsuario}/detalhes`);
+            const info = data.info;
+            
+            // Verifica se a API retornou o ID do usuário no perfil
+            const userProfile = await fetchApi('/usuarios/eu/detalhes');
+            if (userProfile.info.id_usuario === idUsuario) {
+                 showMessage('Atenção: Você está editando o seu próprio perfil. Tenha cautela com as permissões.', 'warning');
+            }
+
+
+            ui.usuarios.usuarioId.value = idUsuario;
+            ui.usuarios.infoEmail.textContent = `Usuário: ${info.nome} (${info.email})`;
+            ui.usuarios.campoPerfil.value = info.id_perfil;
+            ui.usuarios.campoAtivo.value = info.ativo ? 'true' : 'false';
+            
+            // 3. Popular e pré-selecionar Recursos
+            // data.recursos AGORA VEM DO SERVICE E CONTÉM id_recurso.
+            renderRecursosCheckboxes(data.recursos || []);
+
+            // 4. Popular e pré-selecionar Notificações (Simples)
+            renderNotificacaoCampos(data.configuracoes || []);
+
+        } catch (error) {
+            console.error("Erro ao carregar usuário:", error);
+            showMessage('Erro ao carregar detalhes do usuário: ' + error.message, 'error');
+            return;
+        }
+
+    } else {
+        ui.usuarios.title.textContent = 'Adicionar Novo Usuário';
+        ui.usuarios.infoEmail.textContent = 'O usuário será provisionado após o primeiro login com Google.';
+        ui.usuarios.campoAtivo.value = 'true';
+        
+        // 3. Popular e desmarcar Recursos (todos desmarcados por padrão)
+        renderRecursosCheckboxes([]); 
+
+        // 4. Renderizar um campo vazio para cada tipo de canal (simplificado)
+        renderNotificacaoCampos([]);
+        
+        showMessage('A criação de novos usuários via este modal é apenas para pré-configuração de perfil e permissões.', 'info');
+    }
+
+    ui.usuarios.modal.style.display = 'flex';
+};
+
+/**
+ * Fecha o modal de usuário.
+ */
+function closeUsuarioModal() {
+    ui.usuarios.modal.style.display = 'none';
+    ui.usuarios.form.reset();
+}
+
+/**
+ * Renderiza os checkboxes de Recursos.
+ */
+/**
+ * Renderiza os checkboxes de Recursos.
+ */
+function renderRecursosCheckboxes(recursosSelecionados) {
+    const container = ui.usuarios.recursosContainer;
+    container.innerHTML = '';
+    
+    // Converte os recursos selecionados em um Set de IDs para checagem rápida
+    // O backend agora retorna objetos com id_recurso, então usamos ele.
+    const selectedIds = new Set(recursosSelecionados.map(r => r.id_recurso)); 
+
+    recursosCache.forEach(recurso => {
+        // BUSCANDO O NOME DO RECURSO NO CACHE, POIS A API DE DETALHES RETORNA APENAS O ID
+        const nomeRecurso = recurso.nome_amigavel || `Recurso ID ${recurso.id_recurso}`; 
+        
+        const label = document.createElement('label');
+        const isChecked = selectedIds.has(recurso.id_recurso);
+        
+        label.innerHTML = `
+            <input type="checkbox" name="recursos" value="${recurso.id_recurso}" ${isChecked ? 'checked' : ''}>
+            ${nomeRecurso}
+        `;
+        container.appendChild(label);
+    });
+}
+/**
+ * Renderiza os campos de configuração de notificação.
+ */
+function renderNotificacaoCampos(configuracoesExistentes) {
+    const container = ui.usuarios.notificacaoContainer;
+    container.innerHTML = ''; 
+
+    // Header
+    const headerHtml = `<div style="font-weight: bold; margin-bottom: 5px;">Canal/Endereço</div><div style="font-weight: bold; margin-bottom: 5px;">Habilitado</div>`;
+    container.innerHTML += headerHtml;
+
+    tiposCanalCache.forEach(canal => {
+        const config = configuracoesExistentes.find(c => c.id_tipo_canal === canal.id_tipo_canal) || {};
+
+        // 1. Campo de Endereço (Input/Label)
+        const inputContainer = document.createElement('div');
+        inputContainer.className = 'form-group modal-full-width';
+        inputContainer.innerHTML = `
+            <label for="canal-${canal.id_tipo_canal}" style="font-size: 11px;">${canal.nome} Endereço</label>
+            <input type="text" id="canal-${canal.id_tipo_canal}" 
+                placeholder="${canal.nome === 'Email' ? 'exemplo@empresa.com' : 'Webhook/Token...'}"
+                value="${config.endereco_notificacao || ''}"
+                data-tipo-canal="${canal.id_tipo_canal}"
+                data-nome-canal="${canal.nome}">
+        `;
+        
+        // 2. Campo de Habilitado (Checkbox Simples)
+        const checkContainer = document.createElement('div');
+        checkContainer.className = 'modal-switch';
+        const isHabilitado = config.habilitado !== undefined ? config.habilitado : true; // Default true
+        
+        checkContainer.innerHTML = `
+            <label for="enable-${canal.id_tipo_canal}" style="margin: 0; font-weight: 400;">
+                <input type="checkbox" id="enable-${canal.id_tipo_canal}" 
+                    data-tipo-canal-toggle="${canal.id_tipo_canal}"
+                    ${isHabilitado ? 'checked' : ''}>
+                Habilitar
+            </label>
+        `;
+
+        // Coloca na Grid
+        container.appendChild(inputContainer);
+        container.appendChild(checkContainer);
+    });
+}
+
+
+/**
+ * Lida com o envio do formulário de configuração do usuário (PUT).
+ */
+async function handleUsuarioSubmit(e) {
+    e.preventDefault();
+    
+    const submitBtn = ui.usuarios.form.querySelector('.btn-salvar-usuario');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+
+    const idUsuario = ui.usuarios.usuarioId.value;
+    const isEditing = idUsuario > 0;
+    
+    if (!isEditing) {
+         showMessage('Ação "Adicionar Novo Usuário" não está completa. Use o modal apenas para configurar usuários existentes.', 'error');
+         submitBtn.disabled = false;
+         submitBtn.textContent = 'Salvar Configurações';
+         return;
+    }
+
+    // 1. Coleta Recursos (Toggles)
+    const recursosSelecionados = Array.from(ui.usuarios.recursosContainer.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(chk => Number(chk.value));
+
+    // 2. Coleta Notificações (Endereço + Habilitado)
+    const notificacoesColetadas = [];
+    ui.usuarios.notificacaoContainer.querySelectorAll('input[type="text"]').forEach(input => {
+        const idTipoCanal = Number(input.dataset.tipoCanal);
+        const toggle = ui.usuarios.notificacaoContainer.querySelector(`#enable-${idTipoCanal}`);
+        
+        if (input.value.trim()) {
+            notificacoesColetadas.push({
+                id_tipo_canal: idTipoCanal,
+                endereco_notificacao: input.value.trim(),
+                habilitado: toggle ? toggle.checked : true // Se o toggle não existe, assume ativo
+            });
+        }
+    });
+
+    const payload = {
+        id_perfil: Number(ui.usuarios.campoPerfil.value),
+        ativo: ui.usuarios.campoAtivo.value === 'true',
+        recursos: recursosSelecionados,
+        notificacoes: notificacoesColetadas
+    };
+    
+    try {
+        await fetchApi(`/usuarios/${idUsuario}/configuracao`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+        
+        showMessage('Configurações de usuário atualizadas com sucesso!', 'success');
+        closeUsuarioModal();
+        await loadUsuariosView(); // Recarrega a lista
+
+    } catch (error) {
+        console.error("Erro ao salvar configurações:", error);
+        showMessage(`Erro ao salvar configurações: ${error.message}`, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Salvar Configurações';
     }
 }
 

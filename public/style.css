@@ -212,7 +212,7 @@ button:disabled {
     font-size: 16px;
     opacity: 0.9;
 }
-.kpi-label-lower{
+.kpi-label-lower {
     font-size: 12px;
 }
 .kpi-value {
@@ -237,7 +237,6 @@ button:disabled {
     color: var(--cor-plantonista-borda-fonte);
 }
 .kpi-label-plantonista {
-
     margin: 2px 0px;
     font-size: 13px;
     color: var(--cor-plantonista-borda-fonte);
@@ -288,7 +287,7 @@ button:disabled {
     display: flex;
 }
 
-/* 3. Agora é um container) */
+/* 3. Painel de Incidentes (Container do cabeçalho e lista) */
 .panel-header {
     display: grid; 
     gap: 16px; /* Espaço entre o título e a lista de incidentes */
@@ -617,26 +616,6 @@ button:disabled {
 }
 .action-btn:hover { transform: scale(1.1); }
 
-/* Botão (+) Flutuante no Header da Tabela */
-.btn-add-floating {
-    position: absolute;
-    top: 12px;
-    right: 16px;
-    background: transparent;
-    border: 1px solid white;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 20px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-.btn-add-floating:hover { background: rgba(255,255,255,0.2); }
-
 /* --- MODAL STYLES --- */
 .modal-overlay {
     position: fixed;
@@ -701,26 +680,6 @@ button:disabled {
     border-radius: 6px;
 }
 
-/* Botão (+) Flutuante no Header da Tabela */
-.btn-add-floating {
-    position: absolute;
-    top: 12px;
-    right: 16px;
-    background: transparent;
-    border: 1px solid white;
-    color: white; /* Cor do texto (não mais necessário se usar SVG) */
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    font-size: 20px; /* Não mais necessário se usar SVG */
-    line-height: 1; /* Não mais necessário se usar SVG */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-.btn-add-floating:hover { background: rgba(255,255,255,0.2); }
-
 /* Ajuste para ícones SVG dentro dos botões */
 .action-btn img {
     width: 16px; /* Ajuste o tamanho conforme desejar */
@@ -773,10 +732,11 @@ button:disabled {
     position: relative;
 }
 
+/* Botão (+) Flutuante no Header da Tabela */
 .btn-add-floating {
     position: absolute;
-    top: 10px; /* Ajuste fino vertical */
-    right: 10px; /* Ajuste fino horizontal */
+    top: 10px;
+    right: 10px;
     z-index: 5;
     background: transparent;
     border: none;
@@ -784,18 +744,21 @@ button:disabled {
     padding: 5px;
     border-radius: 50%;
     transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-add-floating:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* TRUQUE PARA DEIXAR O SVG BRANCO */
+/* Estilização do SVG dentro do botão flutuante */
 .btn-add-floating img {
     width: 24px;
     height: 24px;
     display: block;
-    filter: brightness(0) invert(1); /* Transforma qualquer cor em Branco */
+    filter: brightness(0) invert(1); /* Transforma qualquer cor em branco */
 }
 
 /* Ajuste das Colunas da Tabela */

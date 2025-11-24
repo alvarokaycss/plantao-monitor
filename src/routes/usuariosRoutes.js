@@ -32,5 +32,11 @@ router.put("/:id/configuracao",
     UsuariosController.updateUsuarioConfiguracao
 );
 
+// DELETE /usuarios/:id (Admin pode excluir)
+router.delete("/:id", 
+    checkPermission(R_USUARIOS, P_ADMIN), 
+    UsuariosController.deleteUsuario
+);
+
 
 module.exports = router;

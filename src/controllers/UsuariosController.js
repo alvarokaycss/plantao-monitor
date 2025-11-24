@@ -113,3 +113,36 @@ exports.updateUsuarioConfiguracao = async (req, res) => {
         return res.status(500).json({ error: "Erro interno ao configurar usuário" });
     }
 };
+
+/**
+ * DELETE /usuarios/:id
+ * Exclui um usuário e todas as suas relações. (Admin - RF03)
+ */
+exports.deleteUsuario = async (req, res) => {
+    const idUsuarioParaDeletar = asInteger(req.params.id);
+
+    if (!idUsuarioParaDeletar) {
+        return res.status(400).json({ error: "ID de usuário inválido." });
+    }
+
+    // Previne que o usuário delete a si mesmo
+    const idUsuarioLogado = req.user.id_usuario;
+    if (idUsuarioParaDeletar === idUsuarioLogado) {
+        return res.status(400).json({ error: "Não é possível excluir seu próprio usuário." });
+    }
+
+    try {
+        await UsuariosService.deleteUsuario(idUsuarioParaDeletar);
+        return res.status(200).json({ message: "Usuário excluído com sucesso." });
+
+    } catch (err) {
+        if (err.message === "Usuário não encontrado.") {
+            return res.status(404).json({ error: "Usuário não encontrado." });
+        }
+        if (err.message.includes("registros vinculados")) {
+            return res.status(409).json({ error: err.message });
+        }
+        console.error(`Erro ao excluir usuário ${idUsuarioParaDeletar}:`, err);
+        return res.status(500).json({ error: "Erro interno ao excluir usuário" });
+    }
+};

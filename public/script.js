@@ -258,7 +258,40 @@ function init() {
     ui.usuarios.addBtn.onclick = () => openUsuarioModal('new');
     ui.usuarios.btnCancel.onclick = closeUsuarioModal;
     ui.usuarios.form.onsubmit = handleUsuarioSubmit;
-    
+
+    // Listeners do modal de delete de Usuário
+    const btnDelUsuarioFechar = document.getElementById('btn-del-usuario-fechar');
+    const btnDelUsuarioConfirmar = document.getElementById('btn-del-usuario-confirmar');
+    if (btnDelUsuarioFechar) {
+        btnDelUsuarioFechar.onclick = () => {
+            document.getElementById('modal-delete-usuario').style.display = 'none';
+            window.idUsuarioParaDeletar = null;
+        };
+    }
+    if (btnDelUsuarioConfirmar) {
+        btnDelUsuarioConfirmar.onclick = async () => {
+            if (!window.idUsuarioParaDeletar) return;
+            const idUsuario = window.idUsuarioParaDeletar;
+            
+            document.getElementById('modal-delete-usuario').style.display = 'none';
+            
+            try {
+                await fetchApi(`/usuarios/${idUsuario}`, {
+                    method: 'DELETE'
+                });
+                
+                showMessage('Usuário excluído com sucesso.', 'success');
+                await loadUsuariosView();
+                
+            } catch (error) {
+                console.error(error);
+                showMessage('Erro ao excluir: ' + error.message, 'error');
+            } finally {
+                window.idUsuarioParaDeletar = null;
+            }
+        };
+    }
+
 
     // 4. Configura botões de Login/Logout
     ui.loginButton.addEventListener('click', handleLogin);
@@ -1402,6 +1435,9 @@ function renderUsuariosTable(listaUsuarios) {
                 <button class="action-btn" title="Configurar" onclick="openUsuarioModal(${user.id_usuario})">
                     <img src="./gear.svg" alt="Configurar">
                 </button>
+                <button class="action-btn" title="Excluir" onclick="deleteUsuario(${user.id_usuario})">
+                    <img src="./trash.svg" alt="Excluir">
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -1628,6 +1664,53 @@ async function handleUsuarioSubmit(e) {
         submitBtn.textContent = 'Salvar Configurações';
     }
 }
+
+// ==========================================
+// LÓGICA DO MODAL DE DELETAR USUÁRIO
+// ==========================================
+
+let idUsuarioParaDeletar = null; // Variável temporária para o delete
+
+// Variável global para armazenar o ID do usuário a ser deletado
+window.idUsuarioParaDeletar = null;
+// 1. Função para abrir o modal de delete
+window.deleteUsuario = (idUsuario) => {
+    idUsuarioParaDeletar = idUsuario;
+    // Abre o modal de delete
+    window.idUsuarioParaDeletar = idUsuario;
+    document.getElementById('modal-delete-usuario').style.display = 'flex';
+};
+
+// 2. Botão Cancelar (Fecha o modal)
+document.getElementById('btn-del-usuario-fechar').onclick = () => {
+    document.getElementById('modal-delete-usuario').style.display = 'none';
+    idUsuarioParaDeletar = null;
+};
+
+// 3. Botão Confirmar (Executa a API)
+document.getElementById('btn-del-usuario-confirmar').onclick = async () => {
+    if (!idUsuarioParaDeletar) return;
+
+    // Fecha o modal visualmente antes de processar
+    document.getElementById('modal-delete-usuario').style.display = 'none';
+
+    try {
+        await fetchApi(`/usuarios/${idUsuarioParaDeletar}`, {
+            method: 'DELETE'
+        });
+
+        showMessage('Usuário excluído com sucesso.', 'success');
+        loadUsuariosView(); // Atualiza a tabela
+
+    } catch (error) {
+        console.error(error);
+        // Se for erro de chave estrangeira (tem registros vinculados) ou outro erro
+        showMessage('Erro ao excluir: ' + error.message, 'error');
+    } finally {
+        idUsuarioParaDeletar = null;
+    }
+};
+
 
 // Inicia a aplicação
 document.addEventListener('DOMContentLoaded', init);

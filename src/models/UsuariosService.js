@@ -181,3 +181,48 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
         if (client) client.release();
     }
 };
+
+/**
+ * Exclui um usuário e todas as suas relações, em uma transação.
+ * Remove: usuario_recursos, configuracoes_notificacao, escala, e referências em outras tabelas.
+ * @param {number} idUsuarioVal - ID do usuário a ser excluído.
+ * @returns {number} - ID do usuário excluído.
+ */
+exports.deleteUsuario = async (idUsuarioVal) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Remove associações com Recursos (M:N)
+        await client.query(`DELETE FROM ${SCHEMA}.usuario_recursos WHERE id_usuario = $1`, [idUsuarioVal]);
+
+        // 2. Remove configurações de notificação (1:N)
+        await client.query(`DELETE FROM ${SCHEMA}.configuracoes_notificacao WHERE id_usuario = $1`, [idUsuarioVal]);
+
+        // 3. Remove escalas do usuário
+        await client.query(`DELETE FROM ${SCHEMA}.escala WHERE id_usuario = $1`, [idUsuarioVal]);
+
+        // 4. Tenta excluir o usuário
+        const query = `DELETE FROM ${SCHEMA}.usuario WHERE id_usuario = $1 RETURNING id_usuario`;
+        const { rowCount } = await client.query(query, [idUsuarioVal]);
+
+        if (rowCount === 0) {
+            throw new Error('Usuário não encontrado.');
+        }
+
+        await client.query('COMMIT');
+        return idUsuarioVal;
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+
+        // Trata erro de chave estrangeira (usuário referenciado em incidentes ou regras)
+        if (error.code === '23503') {
+            throw new Error('Não é possível excluir o usuário: ele possui registros vinculados em incidentes ou regras.');
+        }
+
+        throw error;
+    } finally {
+        if (client) client.release();
+    }
+};

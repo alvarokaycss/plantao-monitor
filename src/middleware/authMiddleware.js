@@ -21,7 +21,7 @@ const R_NENHUM = null; // Para telas de acesso padrão (Incidentes e KPIs)
  * Verifica o Token do Firebase, carrega ou cria o usuário no Postgres.
  * Inclui:
  * 1. Provisionamento inicial com ativo=FALSE (segurança).
- * 2. BLOQUEIO DE ACESSO se a flag 'ativo' for FALSE.
+ * 2. BLOQUEIO DE ACESSO se a flag 'ativo' for FALSE (mas salvando o registro).
  * 3. Configuração automática e idempotente do canal de Email (UPSERT).
  */
 const checkAuth = async (req, res, next) => {
@@ -94,14 +94,14 @@ const checkAuth = async (req, res, next) => {
         const userProfile = rows[0];
         
         // ============================================
-        // CHECAGEM CRÍTICA DE ATIVAÇÃO (RF03)
+        // CHECAGEM CRÍTICA DE ATIVAÇÃO
         // ============================================
         if (userProfile.ativo === false) {
-            await client.query('ROLLBACK');
-            // Retorna um 403 ou 401. 403 é mais descritivo: Acesso negado.
+            await client.query('COMMIT'); 
+            
             return res.status(403).json({ 
                 error: "Usuário inativo. Seu acesso deve ser aprovado por um administrador.",
-                code: "USER_INACTIVE" // Código customizado para o frontend identificar e tratar
+                code: "USER_INACTIVE" 
             });
         }
         // ============================================
@@ -110,6 +110,7 @@ const checkAuth = async (req, res, next) => {
         const idUsuario = userProfile.id_usuario;
 
         // Passo 3: Configuração Automática de Email (RF04 - UPSERT)
+        // Só executa se o usuário estiver ATIVO (passou pelo if acima)
         const canalEmailQuery = `
             SELECT id_tipo_canal 
             FROM ${SCHEMA}.tipos_canal_notificacao 
@@ -150,11 +151,9 @@ const checkAuth = async (req, res, next) => {
         next();
 
     } catch (err) {
-        // Se a transação falhou em um ponto anterior, este catch a reverte.
+        // Se a transação falhou em um ponto anterior (SQL error), este catch a reverte.
         await client.query('ROLLBACK'); 
         
-        // Se o erro foi o 403/USER_INACTIVE que geramos, o erro deve ser lançado ANTES daqui.
-        // Se não foi lançado, tratamos como erro interno (500).
         console.error("Erro no middleware checkAuth (DB):", err);
         res.status(500).json({ error: "Erro interno ao processar autorização." });
     } finally {

@@ -1,8 +1,14 @@
-// URL base da nossa API (do seu arquivo .js)
+// LEMBRETE: Acabei de identificar um problema nas funções de render (pelo menos as que não usam templates)
+// html injection, corrigir isso depois e verificar as funções de render, vou ver se uso regex ou templates
+
+// ==============================================
+// CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+// ==============================================
+
+// URL base da nossa API
 const BASE_URL = 'http://localhost:8000';
 
-// (substitui firebaseConfig.js)
-// ainda vou botar isso no .env
+// Configuração do Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyCtCAJBu_PPTxk-3DEbj1au1yXPVqnZ5kE",
     authDomain: "qq-monitor-auth.firebaseapp.com",
@@ -50,16 +56,19 @@ const ui = {
     // Template
     incidentTemplate: document.getElementById('incident-item-template'),
 
+    // View de Regras
     regras: {
         view: document.getElementById('view-regras'),
         tbody: document.getElementById('regras-list-body'),
         filterPrioridade: document.getElementById('regras-filter-prioridade'),
         search: document.getElementById('regras-search'),
-        modal: document.getElementById('modal-acoes'),
+        
+        // Modal de Ações (Adiar/Silenciar)
+        modalAcoes: document.getElementById('modal-acoes'), // Renomeado para clareza
         formAcoes: document.getElementById('form-acoes'),
         btnCancelAcao: document.getElementById('btn-cancel-acao'),
         
-        // NOVOS ELEMENTOS PARA CRUD DE REGRAS
+        // Modal CRUD de Regras
         addBtn: document.getElementById('btn-add-regra'),
         crudModal: document.getElementById('modal-regra'),
         crudForm: document.getElementById('form-regra'),
@@ -83,7 +92,7 @@ const ui = {
         btnTestar: document.getElementById('btn-testar-regra')
     },
     
-    // NOVOS ELEMENTOS PARA VIEW DE USUÁRIOS
+    // View de Usuários
     usuarios: {
         view: document.getElementById('view-usuarios'),
         tbody: document.getElementById('usuarios-list-body'),
@@ -104,7 +113,12 @@ const ui = {
         notificacaoContainer: document.getElementById('config-notificacao-container'),
         
         btnCancel: document.getElementById('btn-cancel-usuario')
-    }
+    },
+    
+    // Modais Genéricos
+    modalConfirmacao: document.getElementById('modal-confirmacao'),
+    modalDeleteRegra: document.getElementById('modal-delete-regra'),
+    modalDeleteUsuario: document.getElementById('modal-delete-usuario')
 };
 
 // Variáveis Globais para Cache de Dados Auxiliares e Filtros
@@ -114,6 +128,9 @@ let rolesCache = [];
 let perfisCache = []; 
 let recursosCache = []; 
 let tiposCanalCache = [];
+let idRegraPendenteCancelamento = null; 
+let idRegraParaDeletar = null; 
+let idUsuarioParaDeletar = null; 
 
 
 // ==============================================
@@ -173,7 +190,6 @@ function formatData(isoDate) {
 function formatDataCurta(isoDate) {
     if (!isoDate) return '--';
     try {
-        // Usamos toLocaleDateString que retorna apenas a data
         return new Date(isoDate).toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: '2-digit',
@@ -181,6 +197,24 @@ function formatDataCurta(isoDate) {
         });
     } catch (e) {
         return '--';
+    }
+}
+
+/**
+ * Normaliza uma string de data ISO para o formato datetime-local (YYYY-MM-DDTHH:MM).
+ * @param {string | null} isoString - Data em formato ISO
+ * @returns {string} - String no formato YYYY-MM-DDTHH:MM.
+ */
+function toDatetimeLocal(isoString) {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        // Ajusta o fuso horário para garantir que o input de data/hora local reflita a hora correta
+        date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); 
+        return date.toISOString().slice(0, 16);
+    } catch (e) {
+        console.error("Erro ao formatar data para datetime-local:", e);
+        return '';
     }
 }
 
@@ -218,8 +252,91 @@ function formatRelativeTime(isoDate) {
 }
 
 
+/**
+ * Mostra uma mensagem na área de notificação.
+ * @param {string} text - A mensagem
+ * @param {'success' | 'error' | 'warning' | 'info'} type - O tipo de mensagem
+ */
+function showMessage(text, type = 'success') {
+    const div = document.createElement('div');
+    div.className = `msg ${type}`; // Define o estilo
+    div.textContent = text; // Define o texto
+
+    ui.messageArea.appendChild(div);
+
+    // Remove a mensagem após 4 segundos
+    setTimeout(() => {
+        div.style.opacity = '0';
+        // Remove do DOM após a transição de fade-out
+        setTimeout(() => div.remove(), 500);
+    }, 4000);
+}
+
+
 // ==============================================
-// FUNÇÕES DE AUTENTICAÇÃO (RF01)
+// FUNÇÃO CENTRAL DE FETCH (Wrapper)
+// ==============================================
+
+/**
+ * Wrapper para o fetch() que injeta o token de autenticação
+ * e trata erros comuns da API (401/403).
+ * @param {string} url - URL da API (sem o BASE_URL)
+ * @param {object} options - Opções do Fetch (method, body, etc)
+ * @returns {Promise<any>} - O JSON retornado pela API
+ */
+async function fetchApi(url, options = {}) {
+    if (!idToken) {
+        showMessage("Sessão expirada. Por favor, faça login novamente.", "error");
+        auth.signOut();
+        throw new Error("Token de autenticação expirado ou inválido.");
+    }
+
+    // 1. Define os cabeçalhos
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`, // Injeta o token aqui!
+        ...options.headers
+    };
+
+    // 2. Monta a requisição
+    const requestOptions = {
+        ...options,
+        headers: headers
+    };
+
+    // 3. Faz a chamada
+    const res = await fetch(`${BASE_URL}${url}`, requestOptions);
+
+    // 4. Trata erros
+    if (!res.ok) {
+        let errorData = { error: `Erro ${res.status}: ${res.statusText}` };
+        try {
+            // Tenta ler a mensagem de erro da API
+            errorData = await res.json();
+        } catch (e) {
+            // Ignora se o corpo não for JSON
+        }
+
+        // Se o token expirar (401) ou o usuário for inativo (403), força o logout
+        if (res.status === 401 || (res.status === 403 && errorData.code === "USER_INACTIVE")) {
+            showMessage(errorData.error || "Sessão inválida.", "error");
+            auth.signOut(); // Força o logout
+        }
+
+        // Lança um erro com a mensagem mais específica possível
+        throw new Error(errorData.error || `Falha na API: ${res.statusText}`);
+    }
+
+    // 5. Retorna o JSON (ou null se a resposta for 204 No Content)
+    if (res.status === 204) {
+        return null;
+    }
+    return await res.json();
+}
+
+
+// ==============================================
+// FUNÇÕES DE AUTENTICAÇÃO (RF01) E SETUP
 // ==============================================
 
 /**
@@ -242,139 +359,66 @@ function init() {
         });
     });
 
-    // 3. Configura filtros da tela de incidentes
-    ui.incidentes.filterBtn.addEventListener('click', () => {
-        loadIncidentesView(); // Recarrega a view com os filtros aplicados
-    });
-    
-    // 3.1 Configura filtros e listeners iniciais da tela de Usuários
-    if (ui.usuarios.search) {
-        ui.usuarios.search.onkeyup = () => loadUsuariosView();
-    }
-    if (ui.usuarios.filterPerfil) {
-        ui.usuarios.filterPerfil.onchange = () => loadUsuariosView();
-    }
-    // Listeners do modal de Usuários (adicionados aqui para garantir que existam no DOM)
-    ui.usuarios.addBtn.onclick = () => openUsuarioModal('new');
-    ui.usuarios.btnCancel.onclick = closeUsuarioModal;
-    ui.usuarios.form.onsubmit = handleUsuarioSubmit;
-
-    // Listeners do modal de delete de Usuário
-    const btnDelUsuarioFechar = document.getElementById('btn-del-usuario-fechar');
-    const btnDelUsuarioConfirmar = document.getElementById('btn-del-usuario-confirmar');
-    if (btnDelUsuarioFechar) {
-        btnDelUsuarioFechar.onclick = () => {
-            document.getElementById('modal-delete-usuario').style.display = 'none';
-            window.idUsuarioParaDeletar = null;
-        };
-    }
-    if (btnDelUsuarioConfirmar) {
-        btnDelUsuarioConfirmar.onclick = async () => {
-            if (!window.idUsuarioParaDeletar) return;
-            const idUsuario = window.idUsuarioParaDeletar;
-            
-            document.getElementById('modal-delete-usuario').style.display = 'none';
-            
-            try {
-                await fetchApi(`/usuarios/${idUsuario}`, {
-                    method: 'DELETE'
-                });
-                
-                showMessage('Usuário excluído com sucesso.', 'success');
-                await loadUsuariosView();
-                
-            } catch (error) {
-                console.error(error);
-                showMessage('Erro ao excluir: ' + error.message, 'error');
-            } finally {
-                window.idUsuarioParaDeletar = null;
-            }
-        };
-    }
-
-
-    // 4. Configura botões de Login/Logout
+    // 3. Configura botões de Login/Logout
     ui.loginButton.addEventListener('click', handleLogin);
     ui.logoutButton.addEventListener('click', handleLogout);
 
-    // 5. Inicia o listener de autenticação
-    setupAuthListener();
+    // 4. Configura Listeners de Filtros
+    ui.incidentes.filterBtn.addEventListener('click', loadIncidentesView); 
+    if (ui.regras.search) ui.regras.search.onkeyup = setupRegrasFilters;
+    if (ui.regras.filterPrioridade) ui.regras.filterPrioridade.onchange = setupRegrasFilters;
+    if (ui.usuarios.search) ui.usuarios.search.onkeyup = loadUsuariosView;
+    if (ui.usuarios.filterPerfil) ui.usuarios.filterPerfil.onchange = loadUsuariosView;
 
-    // 6. Configura botões do CRUD de Regras (Já existia)
+    // 5. Configura Listeners do CRUD de Regras
     ui.regras.addBtn.addEventListener('click', () => openRegraModal('new'));
     ui.regras.btnCancelCrud.addEventListener('click', closeRegraModal);
     ui.regras.crudForm.addEventListener('submit', handleRegraSubmit);
-    
-    // Configura o Testar Regra (RF17)
     ui.regras.btnTestar.addEventListener('click', handleTestarRegra);
+    
+    // 6. Configura Listeners do CRUD de Usuários
+    ui.usuarios.addBtn.onclick = () => openUsuarioModal('new');
+    ui.usuarios.btnCancel.onclick = closeUsuarioModal;
+    ui.usuarios.form.onsubmit = handleUsuarioSubmit;
+    
+    // 7. Configura Listeners dos Modais Genéricos
+    setupGenericModalListeners();
+
+    // 8. Inicia o listener de autenticação
+    setupAuthListener();
 }
 
 /**
- * Função para o RF17: Testa a consulta SQL em modo sandbox.
+ * Configura os listeners dos modais genéricos de confirmação/delete.
+ * Essa função elimina a duplicação de listeners nos blocos de Regras e Usuários.
  */
-async function handleTestarRegra() {
-    const btn = ui.regras.btnTestar;
-    const originalText = btn.textContent;
-
-    btn.disabled = true;
-    btn.textContent = 'Testando...';
-    ui.regras.campoResultado.value = ''; // Limpa o campo de resultado
-    
-    // 1. Coleta os dados necessários
-    const id_banco_dados = ui.regras.campoBanco.value;
-    const consulta_sql = ui.regras.campoSqL.value.trim();
-
-    if (!id_banco_dados || !consulta_sql) {
-        showMessage('Selecione um Banco de Dados e preencha a Query SQL.', 'error');
-        btn.disabled = false;
-        btn.textContent = originalText;
-        return;
-    }
-    
-    // 2. Monta o payload
-    const payload = {
-        id_banco_dados: Number(id_banco_dados),
-        consulta_sql: consulta_sql
+function setupGenericModalListeners() {
+    // Modal de Confirmação (para Cancelar Ação de Regra)
+    document.getElementById('btn-conf-fechar').onclick = () => {
+        ui.modalConfirmacao.style.display = 'none';
+        idRegraPendenteCancelamento = null;
     };
+    document.getElementById('btn-conf-executar').onclick = handleConfirmCancelAcao;
 
-    try {
-        // 3. Chama o novo endpoint de teste
-        const resultado = await fetchApi(`/regras/testar`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+    // Modal de Delete Regra
+    document.getElementById('btn-del-fechar').onclick = () => {
+        ui.modalDeleteRegra.style.display = 'none';
+        idRegraParaDeletar = null;
+    };
+    document.getElementById('btn-del-confirmar').onclick = handleConfirmDeleteRegra;
 
-        // 4. Trata o resultado (SUCESSO)
-        let output = `[SUCESSO] Consulta validada. Linhas encontradas: ${resultado.rowCount}\n\n`;
-        
-        if (resultado.rowCount > 0) {
-            output += "Amostra (Primeiras 10 linhas):\n";
-            // Formata o header da tabela (nomes das colunas)
-            const headers = Object.keys(resultado.rows[0]);
-            output += headers.join(' | ') + '\n';
-            output += '-'.repeat(headers.join(' | ').length) + '\n';
-            
-            // Adiciona as linhas (amostra limitada a 10)
-            resultado.rows.slice(0, 10).forEach(row => {
-                output += headers.map(header => String(row[header])).join(' | ') + '\n';
-            });
-        } else {
-            output += "Nenhum resultado retornado pela consulta.";
-        }
-
-        ui.regras.campoResultado.value = output;
-        showMessage('Teste de regra executado com sucesso!', 'success');
-
-    } catch (error) {
-        // 5. Trata o erro (FALHA SQL ou de API)
-        const errorMessage = error.message.replace('Falha na API: Bad Request: ', '');
-        ui.regras.campoResultado.value = `[ERRO] Falha na execução da Query:\n${errorMessage}`;
-        showMessage('Erro ao testar regra. Verifique a sintaxe da SQL.', 'error');
-
-    } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
-    }
+    // Modal de Delete Usuário
+    document.getElementById('btn-del-usuario-fechar').onclick = () => {
+        ui.modalDeleteUsuario.style.display = 'none';
+        idUsuarioParaDeletar = null;
+    };
+    document.getElementById('btn-del-usuario-confirmar').onclick = handleConfirmDeleteUsuario;
+    
+    // Modal de Ações de Regra (Adiar/Silenciar)
+    ui.regras.btnCancelAcao.onclick = () => {
+        ui.regras.modalAcoes.style.display = 'none';
+    };
+    ui.regras.formAcoes.onsubmit = handleRegraAcoesSubmit;
 }
 
 /**
@@ -383,25 +427,17 @@ async function handleTestarRegra() {
 function setupAuthListener() {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Usuário está logado
             ui.loginStatus.textContent = 'Autenticado. Verificando permissões...';
             try {
                 // 1. Obter o token JWT
-                idToken = await user.getIdToken(true); // Força a atualização do token
+                idToken = await user.getIdToken(true); 
 
                 // 2. Atualiza a foto de perfil
-                if (user.photoURL) {
-                    ui.profileButton.innerHTML = `<img src="${user.photoURL}" alt="Perfil" class="profile-image">`;
-                } else if (user.displayName) {
-                    // Pega as duas primeiras letras do nome
-                    const iniciais = user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2);
-                    ui.profileButton.textContent = iniciais.toUpperCase();
-                }
+                updateProfileButton(user);
 
                 // 3. Mostrar a aplicação principal
                 showApp();
             } catch (error) {
-                // Erro ao obter token (pode acontecer se o usuário foi desabilitado no Firebase)
                 console.error("Erro ao obter token:", error);
                 showMessage(`Erro ao verificar token: ${error.message}`, 'error');
                 showLogin();
@@ -412,6 +448,21 @@ function setupAuthListener() {
             showLogin();
         }
     });
+}
+
+/**
+ * Atualiza o ícone/foto do botão de perfil.
+ * @param {firebase.User} user - O objeto User do Firebase.
+ */
+function updateProfileButton(user) {
+    if (user.photoURL) {
+        ui.profileButton.innerHTML = `<img src="${user.photoURL}" alt="Perfil" class="profile-image">`;
+    } else if (user.displayName) {
+        const iniciais = user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2);
+        ui.profileButton.textContent = iniciais.toUpperCase();
+    } else {
+        ui.profileButton.textContent = '??';
+    }
 }
 
 /**
@@ -443,7 +494,6 @@ function handleLogin() {
 
     auth.signInWithPopup(provider)
         .catch((error) => {
-            // Trata erros de login (ex: popup bloqueado, usuário fechou)
             console.error("Erro de login:", error.code, error.message);
             showMessage(`Erro de login: ${error.message}`, 'error');
             ui.loginStatus.textContent = 'Falha no login.';
@@ -466,15 +516,13 @@ function handleLogout() {
  * @param {string} viewName - O nome da view (ex: 'incidentes', 'regras')
  */
 async function navigateTo(viewName) {
-    // 1. Esconde todas as views
+    // 1. Esconde todas as views e atualiza o link ativo
     ui.views.forEach(view => view.style.display = 'none');
-
-    // 2. Atualiza o link ativo na navbar
     ui.navLinks.forEach(link => {
         link.classList.toggle('active', link.dataset.view === viewName);
     });
 
-    // 3. Mostra a view correta
+    // 2. Mostra a view correta
     const activeView = document.getElementById(`view-${viewName}`);
     if (activeView) {
         activeView.style.display = 'block';
@@ -483,7 +531,7 @@ async function navigateTo(viewName) {
         return;
     }
 
-    // 4. Carrega os dados para a view específica
+    // 3. Carrega os dados para a view específica
     try {
         switch (viewName) {
             case 'incidentes':
@@ -492,80 +540,15 @@ async function navigateTo(viewName) {
             case 'regras':
                 await loadRegrasView();
                 break;
-            case 'usuarios': // NOVO
+            case 'usuarios':
                 await loadUsuariosView();
                 break;
-            // Outras views (próximas etapas)
         }
     } catch (error) {
-        // Não mostra a mensagem de erro se for apenas um erro de token (fetchApi já tratou)
         if (idToken) {
             console.error(`Erro ao carregar a view ${viewName}:`, error);
         }
     }
-}
-
-
-// =============================
-// FUNÇÃO CENTRAL DE FETCH 
-// ==============================
-
-/**
- * Wrapper para o fetch() que injeta o token de autenticação
- * e trata erros comuns da API.
- * @param {string} url - URL da API (sem o BASE_URL)
- * @param {object} options - Opções do Fetch (method, body, etc)
- * @returns {Promise<any>} - O JSON retornado pela API
- */
-async function fetchApi(url, options = {}) {
-    if (!idToken) {
-        // Se o token sumir, força o logout
-        showMessage("Sessão expirada. Por favor, faça login novamente.", "error");
-        auth.signOut();
-        throw new Error("Token de autenticação expirado ou inválido.");
-    }
-
-    // 1. Define os cabeçalhos
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`, // Injeta o token aqui!
-        ...options.headers
-    };
-
-    // 2. Monta a requisição
-    const requestOptions = {
-        ...options,
-        headers: headers
-    };
-
-    // 3. Faz a chamada
-    const res = await fetch(`${BASE_URL}${url}`, requestOptions);
-
-    // 4. Trata erros
-    if (!res.ok) {
-        let errorData = { error: `Erro ${res.status}: ${res.statusText}` };
-        try {
-            // Tenta ler a mensagem de erro da API (ex: 409 Conflict)
-            errorData = await res.json();
-        } catch (e) {
-            // Ignora se o corpo não for JSON
-        }
-
-        // Se o token expirar (401) ou o usuário for inativo (403), força o logout
-        if (res.status === 401 || (res.status === 403 && errorData.code === "USER_INACTIVE")) {
-            // Mostra o erro específico da API (ex: "Token expirado" ou "Usuário inativo")
-            showMessage(errorData.error || "Sessão inválida.", "error");
-            auth.signOut(); // Força o logout
-        }
-
-        throw new Error(errorData.error || `Falha na API: ${res.statusText}`);
-    }
-
-    // 5. Retorna o JSON (ou null se a resposta for 204 No Content)
-    if (res.status === 204) {
-        return null;
-    }
-    return await res.json();
 }
 
 
@@ -580,35 +563,24 @@ async function loadIncidentesView() {
     ui.incidentes.listContainer.innerHTML = '<div class="loading-placeholder card">Carregando...</div>';
 
     try {
-        // Usando fetchApi)
         const [kpiData, incidentesData] = await Promise.all([
             fetchApi('/kpis'),
-            fetchIncidentes() // (fetchIncidentes já usa fetchApi)
+            fetchIncidentes()
         ]);
 
         renderKPIs(kpiData);
         renderIncidentesList(incidentesData);
 
     } catch (error) {
-        // Não mostra a mensagem de erro se for apenas um erro de token (fetchApi já tratou)
         if (idToken) {
-            // Mostra o erro no console, não na UI, pra não poluir
             console.error("Erro ao atualizar dashboard:", error.message);
-            // showMessage(`Erro ao atualizar dashboard: ${error.message}`, 'error'); por enquanto deixa comentado
         }
         ui.incidentes.listContainer.innerHTML = '<div class="loading-placeholder card">Falha ao carregar incidentes.</div>';
     }
 }
 
 /**
- * Busca os KPIs da API (Endpoint: GET /kpis)
- */
-async function fetchKPIs() {
-    return fetchApi('/kpis');
-}
-
-/**
- * Busca os incidentes da API (Endpoint: GET /incidentes)
+ * Busca os incidentes da API com base nos filtros.
  */
 async function fetchIncidentes() {
     const status = ui.incidentes.filterStatus.value;
@@ -626,15 +598,13 @@ async function fetchIncidentes() {
  * @param {object} data - O objeto retornado da API (/kpis)
  */
 function renderKPIs(data) {
-    // Preenche o card de plantonista personalizado
+    // KPI Plantonista
     if (data.plantonista_atual) {
         ui.incidentes.kpiPlantonista.textContent = data.plantonista_atual.nome;
-        // Preencher inicio e fim
         ui.incidentes.kpiInicio.textContent = `Início: ${formatDataCurta(data.plantonista_atual.data_inicio)}`;
         ui.incidentes.kpiFim.textContent = `Fim: ${formatDataCurta(data.plantonista_atual.data_fim)}`;
     } else {
         ui.incidentes.kpiPlantonista.textContent = 'Nenhum';
-        // Limpar inicio e fim
         ui.incidentes.kpiInicio.textContent = 'Início: --';
         ui.incidentes.kpiFim.textContent = 'Fim: --';
     }
@@ -642,8 +612,6 @@ function renderKPIs(data) {
     // KPIs Padrão
     ui.incidentes.kpiAbertos.textContent = data.contagens.abertos;
     ui.incidentes.kpiReconhecidos.textContent = data.contagens.reconhecidos;
-
-    // Atenção aqui, talvez tenha um bug de cálculo
     ui.incidentes.kpiMtta.textContent = data.metricas.mtta_minutos;
     ui.incidentes.kpiMttr.textContent = data.metricas.mttr_minutos;
 }
@@ -654,7 +622,7 @@ function renderKPIs(data) {
  */
 function renderIncidentesList(incidentes) {
     const container = ui.incidentes.listContainer;
-    container.innerHTML = ''; // Limpa o "Carregando..."
+    container.innerHTML = ''; 
 
     if (!incidentes || incidentes.length === 0) {
         container.innerHTML = '<div class="loading-placeholder">Nenhum incidente encontrado.</div>';
@@ -662,47 +630,38 @@ function renderIncidentesList(incidentes) {
     }
 
     incidentes.forEach(inc => {
-        // 1. Clonar o template
         const clone = ui.incidentTemplate.content.cloneNode(true);
         const card = clone.querySelector('.incident-item');
-        card.dataset.id = inc.id_incidente; // Armazena o ID no card
-        card.classList.add(`status-${inc.status}`); // Adiciona classe para a borda
+        card.dataset.id = inc.id_incidente; 
+        card.classList.add(`status-${inc.status}`); 
 
-        // 2. Selecionar elementos internos do clone
         const ruleNameH3 = clone.querySelector('.incident-rule-name');
         const prioritySpan = clone.querySelector('.incident-priority');
         const metaDiv = clone.querySelector('.incident-meta');
         const pendingDiv = clone.querySelector('.incident-pending');
-
-        // 3. Preencher os dados (com helpers de UX)
-        // A API envia 'nome_regra' devido ao JOIN no selectIncidentesFiltrados)
-        ruleNameH3.textContent = inc.nome_regra || `Regra ID: ${inc.id_regra}`;
-
-        prioritySpan.textContent = formatPrioridade(inc.prioridade_registro);
-        prioritySpan.dataset.priority = inc.prioridade_registro;
-
-        // Preencher meta e tempo pendente
-        metaDiv.textContent = `${formatStatus(inc.status)} - Criado: ${formatData(inc.data_abertura)}`;
-        pendingDiv.textContent = formatRelativeTime(inc.data_abertura);
-
-        // 4. Lógica dos Botões de Ação
         const btnAck = clone.querySelector('.btn-ack');
         const btnClose = clone.querySelector('.btn-close');
 
-        // Habilita/Desabilita botões conforme o status
+        // Preencher os dados
+        ruleNameH3.textContent = inc.nome_regra || `Regra ID: ${inc.id_regra}`;
+        prioritySpan.textContent = formatPrioridade(inc.prioridade_registro);
+        prioritySpan.dataset.priority = inc.prioridade_registro;
+        metaDiv.textContent = `${formatStatus(inc.status)} - Criado: ${formatData(inc.data_abertura)}`;
+        pendingDiv.textContent = formatRelativeTime(inc.data_abertura);
+
+        // Lógica dos Botões de Ação
         if (inc.status === 'ABERTO') {
-            btnClose.disabled = true; // Só pode fechar se estiver RECONHECIDO
+            btnClose.disabled = true; 
         } else if (inc.status === 'RECONHECIDO') {
-            btnAck.disabled = true; // Já foi reconhecido
+            btnAck.disabled = true; 
         } else if (inc.status === 'FECHADO') {
             btnAck.disabled = true;
             btnClose.disabled = true;
         }
 
-        // 5. Adicionar Ouvintes de Eventos (Listeners)
+        // Adicionar Ouvintes de Eventos (Listeners)
         addCardListeners(card, inc.id_incidente);
 
-        // 6. Adicionar o card pronto ao container
         container.appendChild(clone);
     });
 }
@@ -715,80 +674,62 @@ function renderIncidentesList(incidentes) {
 function addCardListeners(card, incidenteId) {
     const btnAck = card.querySelector('.btn-ack');
     const btnClose = card.querySelector('.btn-close');
-
     const commentInput = card.querySelector('.comment-input');
 
     // Listener: Botão ACK (Ação)
     btnAck.addEventListener('click', () => {
-        // Comentário do ACK removido, pois a API não salva, checar depois
-        console.log(`Ação: Reconhecer (ACK) incidente ${incidenteId}`);
-
-        // Chamando a função da API
         handleAckIncident(incidenteId, btnAck);
     });
 
-    // Listener: Botão Fechar (Ação) Aqui o comentário funciona normal
+    // Listener: Botão Fechar (Ação)
     btnClose.addEventListener('click', () => {
         const comentario = commentInput.value.trim();
 
-        // Validação de comentário
         if (!comentario) {
             showMessage('O comentário de fechamento é obrigatório.', 'error');
             commentInput.focus();
             return;
         }
 
-        console.log(`Ação: Fechar incidente ${incidenteId} com comentário: ${comentario}`);
-
-        //Chamando a função da API)
         handleCloseIncident(incidenteId, comentario, btnClose);
     });
 }
 
 
 // ========================================
-// FUNÇÕES DE AÇÃO (FETCH POST) 
+// FUNÇÕES DE AÇÃO (FETCH POST/PUT) 
 // ========================================
 
 /**
  * Envia a ação de ACK para a API (POST /incidentes/:id/ack)
- * Usa fetchApi
  */
 async function handleAckIncident(incidenteId, button) {
-    button.disabled = true; // Desabilita o botão
+    button.disabled = true;
     button.textContent = 'Aguarde...';
 
     try {
-        // Usando fetchApi
         await fetchApi(`/incidentes/${incidenteId}/ack`, {
             method: 'POST'
-            // A API (checkAuth) pega o ID do usuário pelo token.
         });
 
-        // Sucesso!
         showMessage('Incidente Reconhecido (ACK).', 'success');
-
-        // Recarrega a view inteira para atualizar os KPIs e a lista
-        // O socket.io vai entrar aqui futuramente provavelmente
-        await loadIncidentesView();
+        await loadIncidentesView(); // Recarrega
 
     } catch (error) {
         console.error("Erro ao dar ACK:", error);
         showMessage(`Erro ao dar ACK: ${error.message}`, 'error');
-        button.disabled = false; // Reabilita o botão se falhar
+        button.disabled = false;
         button.textContent = 'ACK';
     }
 }
 
 /**
  * Envia a ação de CLOSE para a API (POST /incidentes/:id/close)
- * Refatorado para usar fetchApi; não envia mais ID no body)
  */
 async function handleCloseIncident(incidenteId, comentario, button) {
     button.disabled = true;
     button.textContent = 'Aguarde...';
 
-    // Validação mantida
     if (!comentario) {
         showMessage('O comentário de fechamento é obrigatório.', 'error');
         button.disabled = false;
@@ -797,74 +738,62 @@ async function handleCloseIncident(incidenteId, comentario, button) {
     }
 
     try {
-        // (Usando fetchApi)
         await fetchApi(`/incidentes/${incidenteId}/close`, {
             method: 'POST',
             body: JSON.stringify({
-                // O ID do usuário foi removido. A API (checkAuth) pega do token.
-                comentario_incidente: comentario // Enviando apenas o comentário
+                comentario_incidente: comentario 
             })
         });
 
-        // Sucesso!
         showMessage('Incidente Fechado.', 'success');
-
-        // Recarrega a view inteira para atualizar os KPIs e a lista
         await loadIncidentesView();
 
     } catch (error) {
         console.error("Erro ao fechar:", error);
         showMessage(`Erro ao fechar: ${error.message}`, 'error');
-        button.disabled = false; // Reabilita o botão se falhar
+        button.disabled = false; 
         button.textContent = 'CLOSE';
     }
-}
-
-
-/**
- * Mostra uma mensagem na área de notificação.
- * @param {string} text - A mensagem
- * @param {'success' | 'error'} type - O tipo de mensagem
- */
-function showMessage(text, type = 'success') {
-    const div = document.createElement('div');
-    div.className = `msg ${type}`; // Define o estilo
-    div.textContent = text; // Define o texto
-
-    ui.messageArea.appendChild(div);
-
-    // Remove a mensagem após 4 segundos
-    setTimeout(() => {
-        div.style.opacity = '0';
-        // Remove do DOM após a transição de fade-out
-        setTimeout(() => div.remove(), 500);
-    }, 4000);
 }
 
 // ============================
 // LÓGICA DA VIEW: REGRAS (RF05/RF18/RF17)
 // ============================
 
+/**
+ * Carrega a lista de regras e renderiza a tabela.
+ */
 async function loadRegrasView() {
     ui.regras.tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Carregando...</td></tr>';
 
     try {
-        // 1. Busca dados da API
         const regras = await fetchApi('/regras');
         regrasCache = regras; // Salva no cache
-
-        // 2. Renderiza
         renderRegrasTable(regras);
-
-        // 3. Configura Filtros (apenas uma vez seria ideal, mas aqui garante funcionamento)
-        setupRegrasFilters();
-
+        setupRegrasFilters(); // Atualiza os listeners
     } catch (error) {
         console.error("Erro ao carregar regras:", error);
         ui.regras.tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Erro ao carregar regras.</td></tr>';
     }
 }
 
+/**
+ * Calcula o status da regra no Front-End (Ativa, Adiada, Silenciada).
+ */
+function calcularStatusFrontend(r) {
+    const agora = new Date();
+    if (r.data_adiar_inicio && r.data_adiar_fim) {
+        if (agora >= new Date(r.data_adiar_inicio) && agora <= new Date(r.data_adiar_fim)) return 'Adiada';
+    }
+    if (r.data_silenciar_inicio && r.data_silenciar_fim) {
+        if (agora >= new Date(r.data_silenciar_inicio) && agora <= new Date(r.data_silenciar_fim)) return 'Silenciada';
+    }
+    return 'Ativa';
+}
+
+/**
+ * Renderiza a tabela de regras.
+ */
 function renderRegrasTable(listaRegras) {
     const tbody = ui.regras.tbody;
     tbody.innerHTML = '';
@@ -876,7 +805,6 @@ function renderRegrasTable(listaRegras) {
 
     listaRegras.forEach(regra => {
         const tr = document.createElement('tr');
-
         const status = calcularStatusFrontend(regra);
 
         let badgeClass = 'badge-status-ativa';
@@ -885,12 +813,12 @@ function renderRegrasTable(listaRegras) {
 
         let actionIconHtml = '';
         if (status === 'Ativa') {
-            // Botão Engrenagem (Configurar)
+            // Botão Engrenagem (Configurar Ação)
             actionIconHtml = `<button class="action-btn btn-config" title="Programar Ação" onclick="openAcaoModal(${regra.id_regra})"><img src="./gear.svg" alt="Programar"></button>`;
         } else {
             // Botão X (Cancelar Ação)
             actionIconHtml = `<button class="action-btn btn-cancel-schedule" title="Cancelar Programação" onclick="cancelarProgramacao(${regra.id_regra})">
-                                <img src="./x.svg" alt="Cancelar" style="width: 16px; height: 16px;">
+                                 <img src="./x.svg" alt="Cancelar" style="width: 16px; height: 16px;">
                               </button>`;
         }
 
@@ -917,64 +845,28 @@ function renderRegrasTable(listaRegras) {
     });
 }
 
-// Função auxiliar para calcular status no Front (já que a lista completa talvez não traga)
-function calcularStatusFrontend(r) {
-    const agora = new Date();
-    if (r.data_adiar_inicio && r.data_adiar_fim) {
-        if (agora >= new Date(r.data_adiar_inicio) && agora <= new Date(r.data_adiar_fim)) return 'Adiada';
-    }
-    if (r.data_silenciar_inicio && r.data_silenciar_fim) {
-        if (agora >= new Date(r.data_silenciar_inicio) && agora <= new Date(r.data_silenciar_fim)) return 'Silenciada';
-    }
-    return 'Ativa';
-}
-
-// Filtros de Regra
+/**
+ * Configura os listeners dos filtros e executa a filtragem local no cache.
+ */
 function setupRegrasFilters() {
-    const filterFunc = () => {
-        const termo = ui.regras.search.value.toLowerCase();
-        const prio = ui.regras.filterPrioridade.value;
+    const termo = ui.regras.search.value.toLowerCase();
+    const prio = ui.regras.filterPrioridade.value;
 
-        const filtradas = regrasCache.filter(r => {
-            const matchNome = r.nome.toLowerCase().includes(termo);
-            const matchPrio = prio ? r.prioridade == prio : true;
-            return matchNome && matchPrio;
-        });
-        renderRegrasTable(filtradas);
-    };
-
-    ui.regras.search.onkeyup = filterFunc;
-    ui.regras.filterPrioridade.onchange = filterFunc;
+    const filtradas = regrasCache.filter(r => {
+        const matchNome = r.nome.toLowerCase().includes(termo);
+        const matchPrio = prio ? r.prioridade == prio : true;
+        return matchNome && matchPrio;
+    });
+    renderRegrasTable(filtradas);
 }
 
 /**
- * Busca dados auxiliares (Bancos, Roles) e preenche os selects/checkboxes.
+ * Busca dados auxiliares (Bancos, Roles) e preenche os selects/checkboxes do formulário.
  */
 async function setupRegraForm() {
-    // Se já estiver cacheado, não busca de novo
-    if (bancosCache.length > 0 && rolesCache.length > 0) return;
-
-    try {
-        const [bancos, roles] = await Promise.all([
-            fetchApi('/bancos'),
-            fetchApi('/roles')
-        ]);
-
-        bancosCache = bancos;
-        rolesCache = roles;
-
-        // 1. Popular Bancos (Select)
-        const selectBanco = ui.regras.campoBanco;
-        selectBanco.innerHTML = '';
-        bancos.forEach(b => {
-            const opt = document.createElement('option');
-            opt.value = b.id_banco_dados;
-            opt.textContent = b.tipo_banco; 
-            selectBanco.appendChild(opt);
-        });
-        
-        // 2. Popular Prioridades (Select)
-        const selectPrioridade = ui.regras.campoPrioridade;
+    // 1. Popular Prioridades (Dropdown)
+    const selectPrioridade = ui.regras.campoPrioridade;
+    if (selectPrioridade && selectPrioridade.options.length === 0) { 
         selectPrioridade.innerHTML = '';
         [
             {id: 1, nome: 'Alta'}, 
@@ -986,46 +878,64 @@ async function setupRegraForm() {
             opt.textContent = p.nome;
             selectPrioridade.appendChild(opt);
         });
+    }
 
-        // 3. Popular Roles (Checkboxes)
-        const rolesContainer = ui.regras.rolesContainer;
-        rolesContainer.innerHTML = '';
-        roles.forEach(r => {
-            const label = document.createElement('label');
-            label.innerHTML = `
-                <input type="checkbox" name="roles" value="${r.id_role}">
-                ${r.nome}
-            `;
-            rolesContainer.appendChild(label);
-        });
+    // 2. Busca e Popula Cache (Bancos e Roles)
+    if (bancosCache.length === 0 || rolesCache.length === 0) {
+        try {
+            const [bancos, roles] = await Promise.all([
+                fetchApi('/bancos'),
+                fetchApi('/roles')
+            ]);
 
-    } catch (error) {
-        console.error("Erro ao carregar dados do formulário de regras:", error);
-        showMessage("Não foi possível carregar Bancos e Roles. Tente recarregar a página.", 'error');
+            bancosCache = bancos;
+            rolesCache = roles;
+
+            // 3. Popular Bancos (Select)
+            const selectBanco = ui.regras.campoBanco;
+            selectBanco.innerHTML = '';
+            bancos.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id_banco_dados;
+                opt.textContent = b.tipo_banco; 
+                selectBanco.appendChild(opt);
+            });
+
+            // 4. Popular Roles (Checkboxes)
+            const rolesContainer = ui.regras.rolesContainer;
+            rolesContainer.innerHTML = '';
+            roles.forEach(r => {
+                const label = document.createElement('label');
+                label.innerHTML = `
+                    <input type="checkbox" name="roles" value="${r.id_role}">
+                    ${r.nome}
+                `;
+                rolesContainer.appendChild(label);
+            });
+
+        } catch (error) {
+            console.error("Erro ao carregar dados do formulário de regras:", error);
+            showMessage("Não foi possível carregar Bancos e Roles.", 'error');
+            throw error;
+        }
     }
 }
 
 // --- Lógica do Modal de Ações (RF18) ---
 
-// Abrir Modal
+/**
+ * Abre o modal de Adiar/Silenciar, pré-preenchendo se a regra já tiver uma ação programada.
+ * É uma função global (window) pois é chamada via `onclick` na tabela.
+ */
 window.openAcaoModal = (idRegra) => {
-    ui.regras.modal.style.display = 'flex';
+    ui.regras.modalAcoes.style.display = 'flex';
     document.getElementById('acao-id-regra').value = idRegra;
 
-    // Preenche o modal se a regra já tiver datas de adiar/silenciar
     const regra = regrasCache.find(r => r.id_regra == idRegra);
     if (regra) {
         const acaoTipoSelect = document.getElementById('acao-tipo');
         const acaoInicioInput = document.getElementById('acao-inicio');
         const acaoFimInput = document.getElementById('acao-fim');
-
-        // Normaliza as datas para o formato datetime-local (YYYY-MM-DDTHH:MM)
-        const toDatetimeLocal = (isoString) => {
-            if (!isoString) return '';
-            const date = new Date(isoString);
-            date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); // Ajusta fuso horário
-            return date.toISOString().slice(0, 16);
-        };
 
         if (regra.data_adiar_inicio && regra.data_adiar_fim) {
             acaoTipoSelect.value = 'adiar';
@@ -1036,7 +946,6 @@ window.openAcaoModal = (idRegra) => {
             acaoInicioInput.value = toDatetimeLocal(regra.data_silenciar_inicio);
             acaoFimInput.value = toDatetimeLocal(regra.data_silenciar_fim);
         } else {
-            // Se não houver, limpa e define padrão
             acaoTipoSelect.value = 'silenciar';
             acaoInicioInput.value = '';
             acaoFimInput.value = '';
@@ -1044,17 +953,14 @@ window.openAcaoModal = (idRegra) => {
     }
 };
 
-// Fechar Modal
-ui.regras.btnCancelAcao.onclick = () => {
-    ui.regras.modal.style.display = 'none';
-};
-
-// Enviar Modal (PATCH na API) // atualizei de put para patch
-ui.regras.formAcoes.onsubmit = async (e) => {
+/**
+ * Envia o formulário de Ações (Adiar/Silenciar) para a API (PATCH /regras/:id/acoes).
+ */
+async function handleRegraAcoesSubmit(e) {
     e.preventDefault();
 
     const idRegra = document.getElementById('acao-id-regra').value;
-    const tipo = document.getElementById('acao-tipo').value; // 'adiar' ou 'silenciar'
+    const tipo = document.getElementById('acao-tipo').value; 
     const inicio = document.getElementById('acao-inicio').value;
     const fim = document.getElementById('acao-fim').value;
 
@@ -1064,7 +970,6 @@ ui.regras.formAcoes.onsubmit = async (e) => {
     }
 
     try {
-        // Agora chamamos a rota específica, enviando apenas o necessário
         await fetchApi(`/regras/${idRegra}/acoes`, {
             method: 'PATCH',
             body: JSON.stringify({
@@ -1075,45 +980,34 @@ ui.regras.formAcoes.onsubmit = async (e) => {
         });
 
         showMessage(`Regra ${tipo === 'adiar' ? 'adiada' : 'silenciada'} com sucesso!`, 'success');
-        ui.regras.modal.style.display = 'none';
-        loadRegrasView(); // Recarrega a tabela para ver o status mudar e o ícone virar X
+        ui.regras.modalAcoes.style.display = 'none';
+        loadRegrasView(); 
 
     } catch (error) {
         console.error(error);
         showMessage('Erro ao salvar ação: ' + error.message, 'error');
     }
-};
+}
 
-// ==========================================
-// LÓGICA DO MODAL DE CONFIRMAÇÃO 
-// ==========================================
 
-let idRegraPendenteCancelamento = null; // Variável temporária
-
-// 1. Substitui a função antiga de cancelar
+/**
+ * Abre o modal de confirmação para cancelar a programação de uma regra (Adiar/Silenciar).
+ * É uma função global (window) pois é chamada via `onclick` na tabela.
+ */
 window.cancelarProgramacao = (idRegra) => {
-    // Guarda o ID para usar depois que o usuário clicar em "Confirmar"
     idRegraPendenteCancelamento = idRegra;
-
-    // Abre o modal customizado
-    document.getElementById('modal-confirmacao').style.display = 'flex';
+    ui.modalConfirmacao.style.display = 'flex';
 };
 
-// 2. Botão "Cancelar" (O verde do seu print - Fecha o modal e não faz nada)
-document.getElementById('btn-conf-fechar').onclick = () => {
-    document.getElementById('modal-confirmacao').style.display = 'none';
-    idRegraPendenteCancelamento = null; // Limpa a variável
-};
-
-// 3. Botão "Confirmar" (O vermelho do seu print - Executa a ação)
-document.getElementById('btn-conf-executar').onclick = async () => {
+/**
+ * Executa a API para cancelar a programação de Adiar/Silenciar (PATCH /regras/:id/acoes com tipo 'cancelar').
+ */
+async function handleConfirmCancelAcao() {
     if (!idRegraPendenteCancelamento) return;
 
-    // Fecha o modal
-    document.getElementById('modal-confirmacao').style.display = 'none';
+    ui.modalConfirmacao.style.display = 'none';
 
     try {
-        // Chama o PATCH com tipo 'cancelar'
         await fetchApi(`/regras/${idRegraPendenteCancelamento}/acoes`, {
             method: 'PATCH',
             body: JSON.stringify({
@@ -1122,41 +1016,31 @@ document.getElementById('btn-conf-executar').onclick = async () => {
         });
 
         showMessage('Programação cancelada. A regra está ativa novamente.', 'success');
-        loadRegrasView(); // Recarrega a tabela
+        loadRegrasView();
 
     } catch (error) {
         showMessage('Erro ao cancelar: ' + error.message, 'error');
     } finally {
         idRegraPendenteCancelamento = null;
     }
-};
+}
 
-// Função para Excluir Regra (Adicione ao final do script.js)
-// ==========================================
-// LÓGICA DO MODAL DE DELETAR (CUSTOM)
-// ==========================================
-
-let idRegraParaDeletar = null; // Variável temporária para o delete
-
-// 1. Substitui a função window.deleteRegra antiga
+/**
+ * Abre o modal de delete da regra.
+ * É uma função global (window) pois é chamada via `onclick` na tabela.
+ */
 window.deleteRegra = (idRegra) => {
     idRegraParaDeletar = idRegra;
-    // Abre o modal de delete
-    document.getElementById('modal-delete-regra').style.display = 'flex';
+    ui.modalDeleteRegra.style.display = 'flex';
 };
 
-// 2. Botão Cancelar (Fecha o modal)
-document.getElementById('btn-del-fechar').onclick = () => {
-    document.getElementById('modal-delete-regra').style.display = 'none';
-    idRegraParaDeletar = null;
-};
-
-// 3. Botão Confirmar (Executa a API)
-document.getElementById('btn-del-confirmar').onclick = async () => {
+/**
+ * Executa a API para deletar a regra (DELETE /regras/:id).
+ */
+async function handleConfirmDeleteRegra() {
     if (!idRegraParaDeletar) return;
 
-    // Fecha o modal visualmente antes de processar
-    document.getElementById('modal-delete-regra').style.display = 'none';
+    ui.modalDeleteRegra.style.display = 'none';
 
     try {
         await fetchApi(`/regras/${idRegraParaDeletar}`, {
@@ -1164,35 +1048,33 @@ document.getElementById('btn-del-confirmar').onclick = async () => {
         });
 
         showMessage('Regra excluída com sucesso.', 'success');
-        loadRegrasView(); // Atualiza a tabela
+        loadRegrasView(); 
 
     } catch (error) {
         console.error(error);
-        // Se for erro de chave estrangeira (tem incidentes vinculados)
         showMessage('Erro ao excluir: ' + error.message, 'error');
     } finally {
         idRegraParaDeletar = null;
     }
-};
+}
+
 
 /**
  * Abre o modal de criação/edição de regra.
+ * É uma função global (window) pois é chamada via `onclick` na tabela.
  * @param {'new' | number} modeOrId - 'new' para criação ou o ID da regra para edição.
  */
 window.openRegraModal = async (modeOrId) => {
-    // 1. Garantir que os dados auxiliares estão carregados
     await setupRegraForm();
     
-    // 2. Limpar o formulário e campos
+    // 1. Limpar e resetar
     ui.regras.crudForm.reset();
     ui.regras.regraId.value = '';
-    ui.regras.campoResultado.value = ''; // Limpa resultado do teste
-    
-    const isEditing = modeOrId !== 'new';
-    
-    // 3. Desmarca todos os checkboxes antes de preencher
+    ui.regras.campoResultado.value = ''; 
     ui.regras.rolesContainer.querySelectorAll('input[type="checkbox"]').forEach(chk => chk.checked = false);
 
+    const isEditing = modeOrId !== 'new';
+    
     if (isEditing) {
         // Modo Edição
         const idRegra = Number(modeOrId);
@@ -1200,10 +1082,9 @@ window.openRegraModal = async (modeOrId) => {
         ui.regras.regraId.value = idRegra;
         
         try {
-            // Busca os detalhes para preencher o formulário
             const regraDetalhes = await fetchApi(`/regras/${idRegra}/detalhes`);
             
-            // Preenche os campos principais
+            // Preenche campos principais
             ui.regras.campoNome.value = regraDetalhes.info.nome || '';
             ui.regras.campoDescricao.value = regraDetalhes.info.descricao || '';
             ui.regras.campoFrequencia.value = regraDetalhes.info.intervalo_minutos || 5;
@@ -1214,21 +1095,16 @@ window.openRegraModal = async (modeOrId) => {
             ui.regras.campoBanco.value = regraDetalhes.info.id_banco_dados || '';
             ui.regras.campoSqL.value = regraDetalhes.info.consulta_sql || '';
             
-            
-            // Lógica de pré-seleção dos Checkboxes:
+            // Pré-seleção dos Checkboxes
             const regraDaLista = regrasCache.find(r => r.id_regra == idRegra);
             if(regraDaLista && regraDaLista.roles_id && Array.isArray(regraDaLista.roles_id)) {
-                
-                const selectedRoleIds = regraDaLista.roles_id.map(String); // Converte para string para comparação
-                
+                const selectedRoleIds = new Set(regraDaLista.roles_id.map(String)); 
                 ui.regras.rolesContainer.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-                    // Verifica se o valor do checkbox está na lista de roles_id da regra
-                    if (selectedRoleIds.includes(chk.value)) {
+                    if (selectedRoleIds.has(chk.value)) {
                         chk.checked = true;
                     }
                 });
             }
-
 
         } catch (error) {
             console.error("Erro ao carregar regra para edição:", error);
@@ -1239,11 +1115,8 @@ window.openRegraModal = async (modeOrId) => {
     } else {
         // Modo Criação
         ui.regras.crudTitle.textContent = 'Adicionar nova regra';
-        // Define defaults (para bancos e prioridade, se houver)
-        ui.regras.campoPrioridade.value = 3; // Baixa por padrão
-        // Deixa o primeiro banco selecionado
+        ui.regras.campoPrioridade.value = 3; 
         if (bancosCache.length > 0) ui.regras.campoBanco.value = bancosCache[0].id_banco_dados; 
-        
     }
 
     ui.regras.crudModal.style.display = 'flex';
@@ -1258,21 +1131,19 @@ function closeRegraModal() {
 }
 
 /**
- * Lida com o envio do formulário (POST ou PUT).
+ * Lida com o envio do formulário (POST para criação, PUT para edição).
  */
 async function handleRegraSubmit(e) {
     e.preventDefault();
     
-    // Desabilita o botão Salvar
     const submitBtn = ui.regras.crudForm.querySelector('.btn-salvar-regra');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Salvando...';
 
-    // 1. Coleta e formata os dados
     const idRegra = ui.regras.regraId.value;
     const isEditing = idRegra > 0;
     
-    // Array de IDs de roles selecionadas (lendo checkboxes)
+    // Coleta roles selecionadas
     const selectedRoles = Array.from(ui.regras.rolesContainer.querySelectorAll('input[type="checkbox"]:checked'))
         .map(chk => Number(chk.value));
         
@@ -1290,27 +1161,21 @@ async function handleRegraSubmit(e) {
         intervalo_minutos: Number(ui.regras.campoFrequencia.value),
         qnt_erro_max: Number(ui.regras.campoErros.value),
         prioridade: Number(ui.regras.campoPrioridade.value),
-        roles: selectedRoles, // Array de IDs de roles
+        roles: selectedRoles, 
         descricao: ui.regras.campoDescricao.value || null,
         janela_inicio: ui.regras.campoJanelaInicio.value || '00:00:00',
         janela_fim: ui.regras.campoJanelaFim.value || '23:59:59',
-        // O modal de ações cuida das datas de adiar/silenciar
-        data_adiar_inicio: null, 
-        data_adiar_fim: null,
-        data_silenciar_inicio: null,
-        data_silenciar_fim: null,
+        // As datas de adiar/silenciar são tratadas no modal de Ações
     };
     
     try {
         if (isEditing) {
-            // Edição: PUT
             await fetchApi(`/regras/${idRegra}`, {
                 method: 'PUT',
                 body: JSON.stringify(payload)
             });
             showMessage('Regra atualizada com sucesso!', 'success');
         } else {
-            // Criação: POST
             await fetchApi(`/regras`, {
                 method: 'POST',
                 body: JSON.stringify(payload)
@@ -1319,7 +1184,7 @@ async function handleRegraSubmit(e) {
         }
 
         closeRegraModal();
-        await loadRegrasView(); // Recarrega a lista para mostrar a nova/editada regra
+        await loadRegrasView();
 
     } catch (error) {
         console.error("Erro ao salvar regra:", error);
@@ -1329,6 +1194,75 @@ async function handleRegraSubmit(e) {
         submitBtn.textContent = 'Salvar';
     }
 }
+
+
+/**
+ * Função para o RF17: Testa a consulta SQL em modo sandbox.
+ */
+async function handleTestarRegra() {
+    const btn = ui.regras.btnTestar;
+    const originalText = btn.textContent;
+
+    btn.disabled = true;
+    btn.textContent = 'Testando...';
+    ui.regras.campoResultado.value = ''; 
+    
+    // 1. Coleta os dados necessários
+    const id_banco_dados = ui.regras.campoBanco.value;
+    const consulta_sql = ui.regras.campoSqL.value.trim();
+
+    if (!id_banco_dados || !consulta_sql) {
+        showMessage('Selecione um Banco de Dados e preencha a Query SQL.', 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+        return;
+    }
+    
+    const payload = {
+        id_banco_dados: Number(id_banco_dados),
+        consulta_sql: consulta_sql
+    };
+
+    try {
+        // 2. Chama o endpoint de teste
+        const resultado = await fetchApi(`/regras/testar`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        // 3. Trata o resultado (SUCESSO)
+        let output = `[SUCESSO] Consulta validada. Linhas encontradas: ${resultado.rowCount}\n\n`;
+        
+        if (resultado.rowCount > 0) {
+            output += "Amostra (Primeiras 10 linhas):\n";
+            // Formata o header da tabela (nomes das colunas)
+            const headers = Object.keys(resultado.rows[0]);
+            output += headers.join(' | ') + '\n';
+            output += '-'.repeat(headers.join(' | ').length) + '\n';
+            
+            // Adiciona as linhas (amostra limitada a 10)
+            resultado.rows.slice(0, 10).forEach(row => {
+                output += headers.map(header => String(row[header])).join(' | ') + '\n';
+            });
+        } else {
+            output += "Nenhum resultado retornado pela consulta.";
+        }
+
+        ui.regras.campoResultado.value = output;
+        showMessage('Teste de regra executado com sucesso!', 'success');
+
+    } catch (error) {
+        // 4. Trata o erro (FALHA SQL ou de API)
+        const errorMessage = error.message.replace('Falha na API: Bad Request: ', '');
+        ui.regras.campoResultado.value = `[ERRO] Falha na execução da Query:\n${errorMessage}`;
+        showMessage('Erro ao testar regra. Verifique a sintaxe da SQL.', 'error');
+
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+}
+
 
 // ============================
 // LÓGICA DA VIEW: USUÁRIOS (RF03/RF02/RF04)
@@ -1341,10 +1275,7 @@ async function loadUsuariosView() {
     ui.usuarios.tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Carregando...</td></tr>';
 
     try {
-        // 1. Busca dados auxiliares
         await setupUsuarioFormCaches();
-
-        // 2. Busca lista de usuários
         const data = await fetchUsuarios();
         renderUsuariosTable(data);
         
@@ -1369,10 +1300,9 @@ async function fetchUsuarios() {
 }
 
 /**
- * Popula caches de dados auxiliares (Perfis, Recursos, Tipos de Canal).
+ * Popula caches de dados auxiliares (Perfis, Recursos, Tipos de Canal) e o dropdown de filtro.
  */
 async function setupUsuarioFormCaches() {
-    // Se já tiver todos os caches, retorna
     if (perfisCache.length > 0 && recursosCache.length > 0 && tiposCanalCache.length > 0) return;
 
     try {
@@ -1418,7 +1348,6 @@ function renderUsuariosTable(listaUsuarios) {
 
     listaUsuarios.forEach(user => {
         const tr = document.createElement('tr');
-        // Busca o nome do perfil no cache
         const perfil = perfisCache.find(p => p.id_perfil === user.id_perfil);
         const perfilNome = perfil ? perfil.nome : 'N/A';
         const statusText = user.ativo ? 'Ativo' : 'Inativo';
@@ -1446,9 +1375,10 @@ function renderUsuariosTable(listaUsuarios) {
 
 /**
  * Abre o modal de edição/configuração de usuário.
+ * É uma função global (window) pois é chamada via `onclick` na tabela.
  */
 window.openUsuarioModal = async (modeOrId) => {
-    // 1. Limpar formulário e containers
+    // 1. Limpar e resetar
     ui.usuarios.form.reset();
     ui.usuarios.recursosContainer.innerHTML = '';
     ui.usuarios.notificacaoContainer.innerHTML = '';
@@ -1456,7 +1386,7 @@ window.openUsuarioModal = async (modeOrId) => {
     
     const isEditing = modeOrId !== 'new';
     
-    // 2. Popular dropdowns auxiliares (Perfis)
+    // 2. Popular dropdown de Perfis
     const selectPerfil = ui.usuarios.campoPerfil;
     selectPerfil.innerHTML = '';
     perfisCache.forEach(p => {
@@ -1475,12 +1405,11 @@ window.openUsuarioModal = async (modeOrId) => {
             const data = await fetchApi(`/usuarios/${idUsuario}/detalhes`);
             const info = data.info;
             
-            // Verifica se a API retornou o ID do usuário no perfil
+            // Alerta de edição de perfil próprio
             const userProfile = await fetchApi('/usuarios/eu/detalhes');
             if (userProfile.info.id_usuario === idUsuario) {
                  showMessage('Atenção: Você está editando o seu próprio perfil. Tenha cautela com as permissões.', 'warning');
             }
-
 
             ui.usuarios.usuarioId.value = idUsuario;
             ui.usuarios.infoEmail.textContent = `Usuário: ${info.nome} (${info.email})`;
@@ -1488,10 +1417,9 @@ window.openUsuarioModal = async (modeOrId) => {
             ui.usuarios.campoAtivo.value = info.ativo ? 'true' : 'false';
             
             // 3. Popular e pré-selecionar Recursos
-            // data.recursos AGORA VEM DO SERVICE E CONTÉM id_recurso.
             renderRecursosCheckboxes(data.recursos || []);
 
-            // 4. Popular e pré-selecionar Notificações (Simples)
+            // 4. Popular e pré-selecionar Notificações
             renderNotificacaoCampos(data.configuracoes || []);
 
         } catch (error) {
@@ -1505,10 +1433,8 @@ window.openUsuarioModal = async (modeOrId) => {
         ui.usuarios.infoEmail.textContent = 'O usuário será provisionado após o primeiro login com Google.';
         ui.usuarios.campoAtivo.value = 'true';
         
-        // 3. Popular e desmarcar Recursos (todos desmarcados por padrão)
+        // Configuração padrão para novo usuário
         renderRecursosCheckboxes([]); 
-
-        // 4. Renderizar um campo vazio para cada tipo de canal (simplificado)
         renderNotificacaoCampos([]);
         
         showMessage('A criação de novos usuários via este modal é apenas para pré-configuração de perfil e permissões.', 'info');
@@ -1526,21 +1452,15 @@ function closeUsuarioModal() {
 }
 
 /**
- * Renderiza os checkboxes de Recursos.
- */
-/**
- * Renderiza os checkboxes de Recursos.
+ * Renderiza os checkboxes de Recursos, pré-selecionando os já configurados.
  */
 function renderRecursosCheckboxes(recursosSelecionados) {
     const container = ui.usuarios.recursosContainer;
     container.innerHTML = '';
     
-    // Converte os recursos selecionados em um Set de IDs para checagem rápida
-    // O backend agora retorna objetos com id_recurso, então usamos ele.
     const selectedIds = new Set(recursosSelecionados.map(r => r.id_recurso)); 
 
     recursosCache.forEach(recurso => {
-        // BUSCANDO O NOME DO RECURSO NO CACHE, POIS A API DE DETALHES RETORNA APENAS O ID
         const nomeRecurso = recurso.nome_amigavel || `Recurso ID ${recurso.id_recurso}`; 
         
         const label = document.createElement('label');
@@ -1553,6 +1473,7 @@ function renderRecursosCheckboxes(recursosSelecionados) {
         container.appendChild(label);
     });
 }
+
 /**
  * Renderiza os campos de configuração de notificação.
  */
@@ -1560,14 +1481,14 @@ function renderNotificacaoCampos(configuracoesExistentes) {
     const container = ui.usuarios.notificacaoContainer;
     container.innerHTML = ''; 
 
-    // Header
+    // Header da Grid
     const headerHtml = `<div style="font-weight: bold; margin-bottom: 5px;">Canal/Endereço</div><div style="font-weight: bold; margin-bottom: 5px;">Habilitado</div>`;
     container.innerHTML += headerHtml;
 
     tiposCanalCache.forEach(canal => {
         const config = configuracoesExistentes.find(c => c.id_tipo_canal === canal.id_tipo_canal) || {};
 
-        // 1. Campo de Endereço (Input/Label)
+        // 1. Campo de Endereço (Input)
         const inputContainer = document.createElement('div');
         inputContainer.className = 'form-group modal-full-width';
         inputContainer.innerHTML = `
@@ -1579,10 +1500,11 @@ function renderNotificacaoCampos(configuracoesExistentes) {
                 data-nome-canal="${canal.nome}">
         `;
         
-        // 2. Campo de Habilitado (Checkbox Simples)
+        // 2. Campo de Habilitado (Checkbox)
         const checkContainer = document.createElement('div');
         checkContainer.className = 'modal-switch';
-        const isHabilitado = config.habilitado !== undefined ? config.habilitado : true; // Default true
+        // Assume habilitado se a config não existe (padrão 'true')
+        const isHabilitado = config.habilitado !== undefined ? config.habilitado : true; 
         
         checkContainer.innerHTML = `
             <label for="enable-${canal.id_tipo_canal}" style="margin: 0; font-weight: 400;">
@@ -1601,7 +1523,7 @@ function renderNotificacaoCampos(configuracoesExistentes) {
 
 
 /**
- * Lida com o envio do formulário de configuração do usuário (PUT).
+ * Lida com o envio do formulário de configuração do usuário (PUT /usuarios/:id/configuracao).
  */
 async function handleUsuarioSubmit(e) {
     e.preventDefault();
@@ -1614,27 +1536,28 @@ async function handleUsuarioSubmit(e) {
     const isEditing = idUsuario > 0;
     
     if (!isEditing) {
-         showMessage('Ação "Adicionar Novo Usuário" não está completa. Use o modal apenas para configurar usuários existentes.', 'error');
-         submitBtn.disabled = false;
-         submitBtn.textContent = 'Salvar Configurações';
-         return;
+        showMessage('Ação "Adicionar Novo Usuário" não está completa. Use o modal apenas para configurar usuários existentes.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Salvar Configurações';
+        return;
     }
 
-    // 1. Coleta Recursos (Toggles)
+    // 1. Coleta Recursos
     const recursosSelecionados = Array.from(ui.usuarios.recursosContainer.querySelectorAll('input[type="checkbox"]:checked'))
         .map(chk => Number(chk.value));
 
-    // 2. Coleta Notificações (Endereço + Habilitado)
+    // 2. Coleta Notificações
     const notificacoesColetadas = [];
     ui.usuarios.notificacaoContainer.querySelectorAll('input[type="text"]').forEach(input => {
         const idTipoCanal = Number(input.dataset.tipoCanal);
         const toggle = ui.usuarios.notificacaoContainer.querySelector(`#enable-${idTipoCanal}`);
         
-        if (input.value.trim()) {
+        // Apenas envia configurações se o endereço foi preenchido
+        if (input.value.trim()) { 
             notificacoesColetadas.push({
                 id_tipo_canal: idTipoCanal,
                 endereco_notificacao: input.value.trim(),
-                habilitado: toggle ? toggle.checked : true // Se o toggle não existe, assume ativo
+                habilitado: toggle ? toggle.checked : true
             });
         }
     });
@@ -1654,7 +1577,7 @@ async function handleUsuarioSubmit(e) {
         
         showMessage('Configurações de usuário atualizadas com sucesso!', 'success');
         closeUsuarioModal();
-        await loadUsuariosView(); // Recarrega a lista
+        await loadUsuariosView(); 
 
     } catch (error) {
         console.error("Erro ao salvar configurações:", error);
@@ -1665,34 +1588,22 @@ async function handleUsuarioSubmit(e) {
     }
 }
 
-// ==========================================
-// LÓGICA DO MODAL DE DELETAR USUÁRIO
-// ==========================================
-
-let idUsuarioParaDeletar = null; // Variável temporária para o delete
-
-// Variável global para armazenar o ID do usuário a ser deletado
-window.idUsuarioParaDeletar = null;
-// 1. Função para abrir o modal de delete
+/**
+ * Abre o modal de delete do usuário.
+ * É uma função global (window) pois é chamada via `onclick` na tabela.
+ */
 window.deleteUsuario = (idUsuario) => {
     idUsuarioParaDeletar = idUsuario;
-    // Abre o modal de delete
-    window.idUsuarioParaDeletar = idUsuario;
-    document.getElementById('modal-delete-usuario').style.display = 'flex';
+    ui.modalDeleteUsuario.style.display = 'flex';
 };
 
-// 2. Botão Cancelar (Fecha o modal)
-document.getElementById('btn-del-usuario-fechar').onclick = () => {
-    document.getElementById('modal-delete-usuario').style.display = 'none';
-    idUsuarioParaDeletar = null;
-};
-
-// 3. Botão Confirmar (Executa a API)
-document.getElementById('btn-del-usuario-confirmar').onclick = async () => {
+/**
+ * Executa a API para deletar o usuário (DELETE /usuarios/:id).
+ */
+async function handleConfirmDeleteUsuario() {
     if (!idUsuarioParaDeletar) return;
 
-    // Fecha o modal visualmente antes de processar
-    document.getElementById('modal-delete-usuario').style.display = 'none';
+    ui.modalDeleteUsuario.style.display = 'none';
 
     try {
         await fetchApi(`/usuarios/${idUsuarioParaDeletar}`, {
@@ -1700,17 +1611,20 @@ document.getElementById('btn-del-usuario-confirmar').onclick = async () => {
         });
 
         showMessage('Usuário excluído com sucesso.', 'success');
-        loadUsuariosView(); // Atualiza a tabela
+        loadUsuariosView(); 
 
     } catch (error) {
         console.error(error);
-        // Se for erro de chave estrangeira (tem registros vinculados) ou outro erro
         showMessage('Erro ao excluir: ' + error.message, 'error');
     } finally {
         idUsuarioParaDeletar = null;
     }
-};
+}
 
 
-// Inicia a aplicação
+// ==============================================
+// INICIALIZAÇÃO
+// ==============================================
+
+// Inicia a aplicação quando o DOM estiver completamente carregado
 document.addEventListener('DOMContentLoaded', init);

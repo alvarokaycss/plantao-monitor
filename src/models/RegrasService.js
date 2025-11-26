@@ -29,7 +29,7 @@ exports.selectRegrasFiltradas = async (filtros = {}) => {
             valores.push(`%${nome.trim()}%`);
             queryIndex++;
         }
-
+        // Remove valores nulos e agrega todos os ID's de regra_role em um único array
         let q = `
             SELECT 
                 r.*, 

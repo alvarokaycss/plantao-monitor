@@ -23,6 +23,7 @@ const R_NENHUM = null; // Para telas de acesso padrão (Incidentes e KPIs)
  * 1. Provisionamento inicial com ativo=FALSE (segurança).
  * 2. BLOQUEIO DE ACESSO se a flag 'ativo' for FALSE (mas salvando o registro).
  * 3. Configuração automática e idempotente do canal de Email (UPSERT).
+ * LEMBRETE: Refatorar isso depois tem muitas funcionalidades em uma função só
  */
 const checkAuth = async (req, res, next) => {
     const authorization = req.headers.authorization;
@@ -98,7 +99,7 @@ const checkAuth = async (req, res, next) => {
         // ============================================
         if (userProfile.ativo === false) {
             await client.query('COMMIT'); 
-            
+            // Isso aqui eu usei para cadastrar o usuário antes de ativar to analisando isso ainda, provavelmente eu vou alterar o fluxo desse commit pra outro lugar (cadastrar independente etc) -> fluxo de commit notion qqtech (tá la)
             return res.status(403).json({ 
                 error: "Usuário inativo. Seu acesso deve ser aprovado por um administrador.",
                 code: "USER_INACTIVE" 
@@ -108,7 +109,8 @@ const checkAuth = async (req, res, next) => {
 
 
         const idUsuario = userProfile.id_usuario;
-
+        
+        // LEMBRETE: Mover esse "UPSERT" daqui, não faz nenhum sentido, coloquei pra testar algo mas não lembro o que foi (so sei que estava relacionado a algum problema de cadastro que pensei na hora, mas olhando melhor não faz sentido, remova daqui depois)
         // Passo 3: Configuração Automática de Email (RF04 - UPSERT)
         // Só executa se o usuário estiver ATIVO (passou pelo if acima)
         const canalEmailQuery = `

@@ -536,7 +536,6 @@ button:disabled {
 .login-status-text {
     font-size: 12px;
     color: var(--cor-texto-secundario);
-    height: 16px; /* Para evitar pulo de layout */
 }
 
 /* Botão de Logout */
@@ -1061,4 +1060,57 @@ button:disabled {
 #config-notificacao-container .modal-switch {
     /* Centraliza o toggle na segunda coluna */
     justify-content: center;
+}
+
+/* ============================================== */
+/* 13. Estilos do Formulário de Login (Refatorado) */
+/* ============================================== */
+
+.login-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.login-input-group label {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--cor-texto-secundario);
+}
+
+.login-input-group input {
+    width: 100%;
+    padding: 10px;
+}
+
+.btn-full {
+    width: 100%;
+    margin-top: 8px;
+    justify-content: center; /* Centraliza texto se for flex */
+}
+
+.btn-secondary {
+    background-color: #6c757d; /* Cinza para botão secundário */
+    color: white;
+}
+
+.link-toggle {
+    cursor: pointer;
+    font-size: 13px;
+    color: #214CA9;
+    text-align: center;
+    text-decoration: underline;
+    margin-top: 10px;
+}
+
+/* Utilitário para esconder elementos (usado no toggle Login/Cadastro) */
+.hidden {
+    display: none !important;
 }

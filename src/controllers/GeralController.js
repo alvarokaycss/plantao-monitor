@@ -47,6 +47,20 @@ const getLogTable = (serviceMethod) => {
     };
 };
 
+exports.dbTest = async (req, res) => {
+    try {
+        const { pool } = require("../db/db");
+        const result = await pool.query('SELECT NOW() as now');
+        res.json({ 
+            status: "OK", 
+            message: "Conexão com Banco bem-sucedida!", 
+            time: result.rows[0].now 
+        });
+    } catch (error) {
+        res.status(500).json({ status: "ERRO", error: error.message });
+    }
+};
+
 // Exporta as funções de Log (usando o service)
 exports.getLogExecucoes = getLogTable(GeralService.getLogExecucoes);
 exports.getLogNotificacoes = getLogTable(GeralService.getLogNotificacoes);

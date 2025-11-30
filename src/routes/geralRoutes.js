@@ -7,8 +7,9 @@ const { checkAuth, checkPermission, R_NENHUM, P_ADMIN_OP } = require('../middlew
 
 // Rotas Gerais (Públicas)
 router.get("/", GeralController.healthCheck); 
-router.get("/qqmonitor", GeralController.serveIndex); 
-
+router.get("/qqmonitor", GeralController.serveIndex);
+// Teste de banco dados
+router.get("/db-test", GeralController.dbTest);
 
 // Rotas de Log (Protegidas) - RF15
 // Logs geralmente são para Admin/Operator

@@ -12,6 +12,7 @@ const TABLES = {
     usuario_recursos: "usuario_recursos",
     escalas: "escala",
     regras: "regra",
+    fila_runner: "fila_runner",
     regras_roles: "regra_role",
     incidentes: "incidente",
     log_execucoes: "log_execucoes_regras",

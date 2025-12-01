@@ -47,6 +47,7 @@ const getLogTable = (serviceMethod) => {
     };
 };
 
+// Função de ping para conexão com banco
 exports.dbTest = async (req, res) => {
     try {
         const { pool } = require("../db/db");
@@ -60,6 +61,16 @@ exports.dbTest = async (req, res) => {
         res.status(500).json({ status: "ERRO", error: error.message });
     }
 };
+
+// Função pra consulta fila_runner
+exports.runner = async (req, res) => {
+    try {
+    const data = await GeralService.getFilaRunner();
+        res.json({data})
+    } catch (error) {
+        res.status(500).json({ status: "ERRO", error: error.message });
+    }
+}
 
 // Exporta as funções de Log (usando o service)
 exports.getLogExecucoes = getLogTable(GeralService.getLogExecucoes);

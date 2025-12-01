@@ -30,3 +30,5 @@ const selectAll = async (tableKey) => {
 exports.getLogExecucoes = () => selectAll("log_execucoes");
 exports.getLogNotificacoes = () => selectAll("log_notificacoes");
 exports.getLogAuditoria = () => selectAll("log_auditoria");
+// Função do Runner
+exports.getFilaRunner = () => selectAll("fila_runner");

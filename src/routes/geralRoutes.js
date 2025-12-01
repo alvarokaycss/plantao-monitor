@@ -10,6 +10,8 @@ router.get("/", GeralController.healthCheck);
 router.get("/qqmonitor", GeralController.serveIndex);
 // Teste de banco dados
 router.get("/db-test", GeralController.dbTest);
+// Rota da fila runner
+router.get("/fila_runner", checkAuth, checkPermission(R_NENHUM, P_ADMIN_OP) , GeralController.runner);
 
 // Rotas de Log (Protegidas) - RF15
 // Logs geralmente são para Admin/Operator

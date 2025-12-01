@@ -42,7 +42,7 @@ def processar_fila():
         # Se tentativas vier None (banco legado), assume 0
         if tentativas_atuais is None: tentativas_atuais = 0
         
-        print(f"🔨 [Worker] Processando Fila #{id_fila} (Regra {id_regra}) - Tentativa {tentativas_atuais + 1}...")
+        print(f"🔨 [Executor] Processando Fila #{id_fila} (Regra {id_regra}) - Tentativa {tentativas_atuais + 1}...")
 
         # --- 2. BUSCAR REGRA E CONFIGURAÇÃO DE ERRO ---
         # Buscamos o SQL e o LIMITE DE ERROS da regra

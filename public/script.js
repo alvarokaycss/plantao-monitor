@@ -759,8 +759,8 @@ function renderRegrasTable(list) {
         if (status === 'Silenciada') badgeClass = 'badge-status-silenciada';
 
         const actionBtn = status === 'Ativa'
-            ? `<button class="action-btn" onclick="openAcaoModal(${r.id_regra})"><img src="./gear.svg"></button>`
-            : `<button class="action-btn" onclick="cancelarProgramacao(${r.id_regra})"><img src="./x.svg"></button>`;
+            ? `<button class="action-btn" onclick="openAcaoModal(${r.id_regra})"><img src="./assets/gear.svg"></button>`
+            : `<button class="action-btn" onclick="cancelarProgramacao(${r.id_regra})"><img src="./assets/x.svg"></button>`;
 
         tr.innerHTML = `
             <td>${r.nome}</td>
@@ -768,8 +768,8 @@ function renderRegrasTable(list) {
             <td><span class="badge badge-prio-${r.prioridade}">${formatPrioridade(r.prioridade)}</span></td>
             <td><span class="badge ${badgeClass}">${status}</span></td>
             <td>
-                <button class="action-btn" onclick="openRegraModal(${r.id_regra})"><img src="./pencil-simple-line.svg"></button>
-                <button class="action-btn" onclick="deleteRegra(${r.id_regra})"><img src="./trash.svg"></button>
+                <button class="action-btn" onclick="openRegraModal(${r.id_regra})"><img src="./assets/pencil-simple-line.svg"></button>
+                <button class="action-btn" onclick="deleteRegra(${r.id_regra})"><img src="./assets/trash.svg"></button>
                 ${actionBtn}
             </td>
         `;
@@ -936,8 +936,8 @@ function renderUsuariosTable(list) {
             <td>${pName}</td>
             <td><span class="badge ${u.ativo ? 'badge-status-ativa' : 'badge-status-silenciada'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
             <td>
-                <button class="action-btn" onclick="openUsuarioModal(${u.id_usuario})"><img src="./gear.svg"></button>
-                <button class="action-btn" onclick="deleteUsuario(${u.id_usuario})"><img src="./trash.svg"></button>
+                <button class="action-btn" onclick="openUsuarioModal(${u.id_usuario})"><img src="./assets/gear.svg"></button>
+                <button class="action-btn" onclick="deleteUsuario(${u.id_usuario})"><img src="./assets/trash.svg"></button>
             </td>
         `;
         ui.usuarios.tbody.appendChild(tr);

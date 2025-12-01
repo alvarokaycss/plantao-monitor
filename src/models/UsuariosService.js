@@ -11,10 +11,10 @@ const { asInteger } = require("../utils/helpers");
 exports.selectUsuariosFiltrados = async (filtros = {}) => {
     const { id_perfil, pesquisa } = filtros;
     const client = await pool.connect();
-    
+
     try {
-        const condicoes = []; 
-        const valores = []; 
+        const condicoes = [];
+        const valores = [];
         let queryIndex = 1;
 
         const idPerfilVal = asInteger(id_perfil);
@@ -34,9 +34,9 @@ exports.selectUsuariosFiltrados = async (filtros = {}) => {
         if (condicoes.length > 0) {
             q += ` WHERE ${condicoes.join(' AND ')}`;
         }
-        
-        q += ` ORDER BY nome ASC;`; 
-        
+
+        q += ` ORDER BY nome ASC;`;
+
         const { rows } = await client.query(q, valores);
         return rows;
 
@@ -85,7 +85,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
             ORDER BY t.nome;
         `;
         const configRes = await client.query(configQuery, [idUsuarioVal]);
-        
+
         // NOVO: Query 3: Buscar os recursos associados (toggles de tela)
         const recursosQuery = `
             SELECT 
@@ -119,7 +119,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
  */
 exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => {
     const { idPerfilVal, statusAtivo, recursosVal, notificacoesVal } = payload;
-    
+
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -134,44 +134,47 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
             RETURNING id_usuario;
         `;
         const userResult = await client.query(updateUsuarioQuery, [idPerfilVal, statusAtivo, idUsuarioParaConfigurar]);
-        
+
         if (userResult.rowCount === 0) {
             throw new Error("Usuário não encontrado para configurar.");
         }
 
         // --- Passo 2: Atualizar 'usuario_recursos' (M:N) (Toggles)
         await client.query(`DELETE FROM ${SCHEMA}.usuario_recursos WHERE id_usuario = $1`, [idUsuarioParaConfigurar]);
-        
+
         if (recursosVal.length > 0) {
-            const insertRecursosQuery = 'INSERT INTO ' + `${SCHEMA}.usuario_recursos` + ' (id_usuario, id_recurso) VALUES ' + 
+            const insertRecursosQuery = 'INSERT INTO ' + `${SCHEMA}.usuario_recursos` + ' (id_usuario, id_recurso) VALUES ' +
                 recursosVal.map((id, index) => `($1, $${index + 2})`).join(', ');
             await client.query(insertRecursosQuery, [idUsuarioParaConfigurar, ...recursosVal]);
         }
+
 
         // --- Passo 3: Atualizar 'configuracoes_notificacao' (1:N) (Canais)
         await client.query(`DELETE FROM ${SCHEMA}.configuracoes_notificacao WHERE id_usuario = $1`, [idUsuarioParaConfigurar]);
 
         if (notificacoesVal.length > 0) {
-            const insertNotificacoesQuery = 'INSERT INTO ' + `${SCHEMA}.configuracoes_notificacao` + 
-                ' (id_usuario, id_tipo_canal, endereco_notificacao, habilitado, nome_dispositivo) VALUES ' + 
-                notificacoesVal.map((n, i) => 
-                    `($1, $${i*5 + 2}, $${i*5 + 3}, $${i*5 + 4}, $${i*5 + 5})`
+            // CORREÇÃO: O multiplicador deve ser 4, pois inserimos 4 campos dinâmicos por linha (Tipo, Endereço, Habilitado, Dispositivo)
+            // O id_usuario ($1) é fixo e não conta no deslocamento do array de valores.
+            const insertNotificacoesQuery = 'INSERT INTO ' + `${SCHEMA}.configuracoes_notificacao` +
+                ' (id_usuario, id_tipo_canal, endereco_notificacao, habilitado, nome_dispositivo) VALUES ' +
+                notificacoesVal.map((n, i) =>
+                    `($1, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4}, $${i * 4 + 5})`
                 ).join(', ');
-            
-            const notificacoesValues = notificacoesVal.flatMap(n => 
+
+            const notificacoesValues = notificacoesVal.flatMap(n =>
                 [
-                    asInteger(n.id_tipo_canal), 
-                    n.endereco_notificacao, 
-                    n.habilitado !== false, // Default true
+                    asInteger(n.id_tipo_canal),
+                    n.endereco_notificacao,
+                    n.habilitado !== false,
                     n.nome_dispositivo || null
                 ]
             );
-            
+
             await client.query(insertNotificacoesQuery, [idUsuarioParaConfigurar, ...notificacoesValues]);
         }
 
         await client.query('COMMIT');
-        
+
         return idUsuarioParaConfigurar;
 
     } catch (err) {

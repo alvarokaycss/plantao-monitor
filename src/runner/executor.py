@@ -110,7 +110,7 @@ def processar_fila():
             
             if novas_tentativas < limite_max_erros:
                 # RETRY: Volta para PENDENTE, incrementa tentativas
-                print(f"   ⚠️ Erro! Tentativa {novas_tentativas}/{limite_max_erros}. Reagendando...")
+                print(f"    Erro! Tentativa {novas_tentativas}/{limite_max_erros}. Reagendando...")
                 cur.execute(f"""
                     UPDATE {DB_SCHEMA}.fila_runner 
                     SET status = 'PENDENTE', tentativas = %s, mensagem_erro = %s
@@ -118,7 +118,7 @@ def processar_fila():
                 """, (novas_tentativas, mensagem_erro, id_fila))
             else:
                 # DESISTE: Marca FALHA
-                print(f"   ❌ Esgotou tentativas ({novas_tentativas}). Marcando FALHA.")
+                print(f"    Esgotou tentativas ({novas_tentativas}). Marcando FALHA.")
                 cur.execute(f"""
                     UPDATE {DB_SCHEMA}.fila_runner 
                     SET status = 'FALHA', tentativas = %s, data_fim_processamento = NOW(), mensagem_erro = %s
@@ -131,7 +131,7 @@ def processar_fila():
         return True
 
     except Exception as e:
-        print(f"❌ Erro Crítico no Executor: {e}")
+        print(f"Erro Crítico no Executor: {e}")
         if conn: conn.rollback()
         return False
 

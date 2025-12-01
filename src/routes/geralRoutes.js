@@ -12,6 +12,8 @@ router.get("/qqmonitor", GeralController.serveIndex);
 router.get("/db-test", GeralController.dbTest);
 // Rota da fila runner
 router.get("/fila_runner", checkAuth, checkPermission(R_NENHUM, P_ADMIN_OP) , GeralController.runner);
+// Rota para gerar relatório de performance do runner
+router.post("/analytics/gerar", GeralController.gerarRelatorioAnalytics);
 
 // Rotas de Log (Protegidas) - RF15
 // Logs geralmente são para Admin/Operator

@@ -3,6 +3,7 @@
 const GeralService = require("../models/GeralService");
 const path = require("path");
 const pkg = require("../../package.json"); // Assume que package.json está na raiz
+const { exec } = require('child_process'); // Utilizada para
 
 /**
  * GET /
@@ -60,6 +61,28 @@ exports.dbTest = async (req, res) => {
     } catch (error) {
         res.status(500).json({ status: "ERRO", error: error.message });
     }
+};
+
+exports.gerarRelatorioAnalytics = (req, res) => {
+    // Caminho absoluto para o script Python
+    const scriptPath = path.join(__dirname, '../../src/analytics/gerar_relatorio.py');
+    
+    // Comando para rodar
+    exec(`python "${scriptPath}"`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Erro ao rodar analytics: ${error.message}`);
+            return res.status(500).json({ error: "Falha ao gerar relatório." });
+        }
+        
+        console.log(`Analytics Output: ${stdout}`);
+        
+        // Retorna o caminho da imagem pública para o front exibir
+        // Adiciona um timestamp na URL para evitar cache do navegador
+        res.json({ 
+            success: true, 
+            imageUrl: `/relatorios/analise_performance.png?t=${Date.now()}` 
+        });
+    });
 };
 
 // Função pra consulta fila_runner

@@ -221,6 +221,9 @@ function init() {
 
     // 10. Inicia Listener de Auth
     setupAuthListener();
+
+    // 11. 
+    setupAnalyticsListener();
 }
 
 // ==============================================
@@ -340,6 +343,56 @@ function setupGenericModalListeners() {
                 btnConfExec.disabled = false;
             }
         };
+    }
+}
+
+function setupAnalyticsListener() {
+    const btnGerarAnalytics = document.getElementById('btn-gerar-analytics');
+    
+    // Referências do Modal Novo
+    const modalAnalytics = document.getElementById('modal-analytics-view');
+    const imgFull = document.getElementById('img-analytics-full');
+    const btnClose = document.getElementById('btn-close-analytics');
+
+    // Fecha se clicar no fundo escuro (UX padrão)
+    if (modalAnalytics) {
+        modalAnalytics.onclick = (e) => {
+            if (e.target === modalAnalytics) { // Garante que clicou fora da imagem
+                modalAnalytics.style.display = 'none';
+            }
+        };
+    }
+
+    if (btnGerarAnalytics) {
+        btnGerarAnalytics.addEventListener('click', async () => {
+            // Feedback de carregamento
+            const originalText = btnGerarAnalytics.innerHTML;
+            btnGerarAnalytics.textContent = 'Gerando Gráfico...';
+            btnGerarAnalytics.disabled = true;
+
+            try {
+                // Chama o Python via Node
+                const response = await fetchApi('/analytics/gerar', { method: 'POST' });
+
+                if (response.success && response.imageUrl) {
+                    // SUCESSO: Define a imagem e ABRE O MODAL
+                    // O timestamp (?t=...) força o navegador a baixar a imagem nova
+                    imgFull.src = response.imageUrl + '&t=' + new Date().getTime();
+                    
+                    // Mostra o modal
+                    modalAnalytics.style.display = 'flex'; 
+                } else {
+                    showMessage('Erro ao gerar gráfico: ' + (response.error || 'Desconhecido'), 'error');
+                }
+            } catch (error) {
+                console.error("Falha analytics:", error);
+                showMessage('Falha na comunicação com o servidor de Analytics.', 'error');
+            } finally {
+                // Restaura o botão
+                btnGerarAnalytics.innerHTML = originalText;
+                btnGerarAnalytics.disabled = false;
+            }
+        });
     }
 }
 

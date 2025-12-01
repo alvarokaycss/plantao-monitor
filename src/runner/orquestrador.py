@@ -6,8 +6,8 @@ import schedule
 from datetime import datetime
 from db import get_db_connection, DB_SCHEMA
 
-def job_verificar_regras():
-    print(f"⏰ [{datetime.now()}] Verificando regras...")
+def verificar_regras():
+    print(f"[{datetime.now()}] Verificando regras...")
     
     conn = get_db_connection()
     if not conn: return
@@ -47,9 +47,11 @@ def job_verificar_regras():
     except Exception as e:
         print(f" Erro no Orquestrador: {e}")
 
-schedule.every(1).minutes.do(job_verificar_regras)
-print(f"🚀 Orquestrador Python Inicializado (Schema: {DB_SCHEMA})...")
+
+schedule.every(1).minutes.do(verificar_regras)
+print(f"Orquestrador Python Inicializado (Schema: {DB_SCHEMA})...")
 
 while True:
     schedule.run_pending()
     time.sleep(1)
+    

@@ -50,7 +50,7 @@ def processar_fila():
         regra = cur.fetchone()
         
         if not regra:
-            # Regra sumiu? Falha fatal.
+            # Regra sumiu? Falha.
             cur.execute(f"UPDATE {DB_SCHEMA}.fila_runner SET status='FALHA', mensagem_erro='Regra não existe' WHERE id_fila=%s", (id_fila,))
             conn.commit(); cur.close(); conn.close()
             return True

@@ -352,7 +352,6 @@ function setupAnalyticsListener() {
     // Referências do Modal Novo
     const modalAnalytics = document.getElementById('modal-analytics-view');
     const imgFull = document.getElementById('img-analytics-full');
-    const btnClose = document.getElementById('btn-close-analytics');
 
     // Fecha se clicar no fundo escuro (UX padrão)
     if (modalAnalytics) {

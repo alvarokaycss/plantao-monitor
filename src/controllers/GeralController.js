@@ -3,7 +3,7 @@
 const GeralService = require("../models/GeralService");
 const path = require("path");
 const pkg = require("../../package.json"); // Assume que package.json está na raiz
-const { exec } = require('child_process'); // Utilizada para
+const { exec } = require('child_process'); // Utilizada para rodar processos menores (scripts)
 
 /**
  * GET /

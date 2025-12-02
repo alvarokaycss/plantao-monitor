@@ -22,11 +22,7 @@ def verificar_regras():
             FROM {DB_SCHEMA}.regra
             WHERE 
                 CURRENT_TIME BETWEEN janela_inicio AND janela_fim
-                AND (
-                    (data_adiar_inicio IS NULL OR NOW() NOT BETWEEN data_adiar_inicio AND data_adiar_fim)
-                    AND
-                    (data_silenciar_inicio IS NULL OR NOW() NOT BETWEEN data_silenciar_inicio AND data_silenciar_fim)
-                )
+                AND (data_adiar_inicio IS NULL OR NOW() NOT BETWEEN data_adiar_inicio AND data_adiar_fim)
                 AND (EXTRACT(MINUTE FROM NOW())::int % intervalo_minutos) = 0
             RETURNING id_regra;
         """

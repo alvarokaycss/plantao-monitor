@@ -68,7 +68,7 @@ def gerar_graficos():
 
     # Visualização (Matplotlib)
     # Criamos uma figura com 2 gráficos (subplots)
-    plt.style.use('ggplot') # Estilo visual bonito
+    plt.style.use('ggplot')
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle(f'Health Check do Runner - {len(df)} execuções analisadas', fontsize=16)
 
@@ -81,7 +81,7 @@ def gerar_graficos():
     if not perf_por_regra.empty:
         # 5 piores (tail pq ordenamos crescente)
         top_lentas = perf_por_regra.tail(5)
-        top_lentas.plot(kind='barh', color='#214CA9', ax=ax2)
+        top_lentas.plot(kind='barh', color='#214CA9', ax=ax2) # Conversação de pandas para plotagem
         ax2.set_title('Tempo Médio de Execução (ms)')
         ax2.set_xlabel('Milissegundos')
     else:

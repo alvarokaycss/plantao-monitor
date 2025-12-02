@@ -8,10 +8,9 @@ const { checkAuth, R_NENHUM, P_TODOS, checkPermission } = require('../middleware
 // Middleware de autenticação aplicado a todas as rotas de incidentes
 router.use(checkAuth); 
 
-// TABELA INCIDENTE
-// GET /incidentes (Todos usuários logados podem ver - R_NENHUM)
+// GET /incidentes
 router.get("/", 
-    checkPermission(R_NENHUM, P_TODOS), // Autorização básica (embora checkAuth já seja suficiente)
+    checkPermission(R_NENHUM, P_TODOS), 
     IncidentesController.getIncidentes
 );
 
@@ -21,17 +20,22 @@ router.get("/:id/detalhes",
     IncidentesController.getIncidenteDetalhes
 );
 
-// POST /incidentes/:id/ack (Operadores podem reconhecer)
+// POST /incidentes/:id/ack
 router.post("/:id/ack", 
-    checkPermission(R_NENHUM, P_TODOS), // P_TODOS porque operadores (viewer) podem dar ACK. P_ADMIN_OP seria melhor se VIEWER não pudesse.
+    checkPermission(R_NENHUM, P_TODOS),
     IncidentesController.ackIncident
 );
 
-// POST /incidentes/:id/close (Operadores podem fechar)
+// POST /incidentes/:id/close
 router.post("/:id/close", 
-    checkPermission(R_NENHUM, P_TODOS), // Mesma regra do ACK
+    checkPermission(R_NENHUM, P_TODOS),
     IncidentesController.closeIncident
 );
 
+// POST /incidentes/:id/reexecute
+router.post("/:id/reexecute",
+    checkPermission(R_NENHUM, P_TODOS),
+    IncidentesController.reexecuteIncident
+);
 
 module.exports = router;

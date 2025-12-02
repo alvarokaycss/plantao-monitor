@@ -188,8 +188,10 @@
 
                     <div id="relatorio-container" class="text-center">
 
-                        <button id="btn-gerar-analytics" class="btn-primary" style="display: flex; align-items: center;">
-                        <img id="img-analytics" class="icon-white" src="./assets/chart-bar.svg" alt="Gráfico gerado via Python">
+                        <button id="btn-gerar-analytics" class="btn-primary"
+                            style="display: flex; align-items: center;">
+                            <img id="img-analytics" class="icon-white" src="./assets/chart-bar.svg"
+                                alt="Gráfico gerado via Python">
                             Diagnóstico do Runner
                         </button>
                     </div>
@@ -632,7 +634,55 @@
             </div>
         </div>
     </template>
+    <div id="modal-detalhes-incidente" class="modal-overlay" style="display: none;">
+        <div class="modal-card modal-detalhe-card">
 
+            <div class="modal-header">
+                <h3 id="detalhe-titulo">Detalhes do Incidente</h3>
+                <button type="button" class="btn-close-modal" id="btn-fechar-detalhe">
+                    <img src="./assets/x.svg" alt="Fechar">
+                </button>
+            </div>
+
+            <div class="modal-body detalhe-body">
+                <div class="detalhe-col-historico">
+                    <h4>Histórico do Incidente</h4>
+                    <div id="timeline-historico" class="timeline-container">
+                    </div>
+
+                    <div class="detalhe-acoes-box"
+                        style="margin-top: 25px; border-top: 1px solid #ddd; padding-top: 15px;">
+                        <h5>Ações:</h5>
+                        <div class="acoes-grid">
+                            <button id="btn-detalhe-ack" class="btn-action btn-ack-full">ACK</button>
+                            <button id="btn-detalhe-close" class="btn-action btn-close-full">CLOSE</button>
+                            <button id="btn-detalhe-reexecute" class="btn-action btn-reexecute">REEXECUTE</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detalhe-col-info">
+                    <div class="detalhe-info-box">
+                        <p><strong>Status:</strong> <span id="detalhe-status">--</span></p>
+                        <p><strong>Regra:</strong> <span id="detalhe-regra">--</span></p>
+                        <p><strong>Plantonista:</strong> <span id="detalhe-plantonista">--</span></p>
+                        <p><strong>Abertura:</strong> <span id="detalhe-abertura">--</span></p>
+                        <p><strong>Fechamento:</strong> <span id="detalhe-fechamento">--</span></p>
+                    </div>
+
+                    <div class="detalhe-erro-box">
+                        <h5>Erro registrado / Amostra:</h5>
+                        <pre id="detalhe-json-erro"></pre>
+                    </div>
+
+                    <div class="detalhe-comentario-box">
+                        <h5>Último comentário registrado:</h5>
+                        <div id="detalhe-ultimo-comentario" class="comentario-read-only">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Carrega o script no final, vou mudar isso pro topo depois e adicionar defer -->
     <script src="script.js"></script>
 </body>

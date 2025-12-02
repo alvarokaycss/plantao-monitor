@@ -1,7 +1,3 @@
-// ==============================================
-// 1. CONFIGURAÇÕES E ESTADO GLOBAL
-// ==============================================
-
 const BASE_URL = 'http://localhost:8000';
 
 // Configuração do Firebase
@@ -56,6 +52,23 @@ const ui = {
     content: document.getElementById('app-content'),
     views: document.querySelectorAll('.view'),
     messageArea: document.getElementById('message-area'),
+
+    // --- ADICIONE ESTE BLOCO ---
+    detalhe: {
+        modal: document.getElementById('modal-detalhes-incidente'),
+        btnClose: document.getElementById('btn-fechar-detalhe'),
+        timeline: document.getElementById('timeline-historico'),
+        lblStatus: document.getElementById('detalhe-status'),
+        lblRegra: document.getElementById('detalhe-regra'),
+        lblPlantonista: document.getElementById('detalhe-plantonista'),
+        lblAbertura: document.getElementById('detalhe-abertura'),
+        lblFechamento: document.getElementById('detalhe-fechamento'),
+        boxJson: document.getElementById('detalhe-json-erro'),
+        boxComentario: document.getElementById('detalhe-ultimo-comentario'),
+        btnAck: document.getElementById('btn-detalhe-ack'),
+        btnCloseInc: document.getElementById('btn-detalhe-close'),
+        btnReexecute: document.getElementById('btn-detalhe-reexecute')
+    },
 
     // Incidentes
     incidentes: {
@@ -215,6 +228,11 @@ function init() {
     if (ui.usuarios.addBtn) ui.usuarios.addBtn.onclick = () => openUsuarioModal('new');
     if (ui.usuarios.btnCancel) ui.usuarios.btnCancel.onclick = closeUsuarioModal;
     if (ui.usuarios.form) ui.usuarios.form.onsubmit = handleUsuarioSubmit;
+    
+    // Listener Incidente detalhe
+    if (ui.detalhe.btnClose) {
+    ui.detalhe.btnClose.onclick = closeDetalheModal;
+}
 
     // 9. Configura Modais Genéricos (Delete/Confirmar)
     setupGenericModalListeners();
@@ -222,7 +240,7 @@ function init() {
     // 10. Inicia Listener de Auth
     setupAuthListener();
 
-    // 11. 
+    // 11. Configura e incializa gráfico
     setupAnalyticsListener();
 }
 
@@ -680,6 +698,42 @@ async function handleEmailLogin() {
     }
 }
 
+async function handleDetalheReexecute() {
+    // Validação de segurança
+    if (!currentIncidenteId) {
+        alert("Erro: Nenhum incidente selecionado.");
+        return;
+    }
+
+    if (!confirm("Tem certeza que deseja reexecutar a regra deste incidente agora?")) return;
+
+    // Feedback visual imediato
+    ui.detalhe.btnReexecute.disabled = true;
+    ui.detalhe.btnReexecute.textContent = "Enviando...";
+
+    try {
+        await fetchApi(`/incidentes/${currentIncidenteId}/reexecute`, { method: 'POST' });
+        
+        // Sucesso
+        alert("Reexecução enviada para a fila com sucesso!");
+        
+        // Fecha o modal pois a ação foi concluída
+        closeDetalheModal();
+        
+        // Atualiza a lista de fundo
+        loadIncidentesView();
+
+    } catch (e) {
+        alert("Erro ao reexecutar: " + e.message);
+    } finally {
+        // Restaura botão caso o modal seja reaberto sem refresh
+        if(ui.detalhe.btnReexecute) {
+            ui.detalhe.btnReexecute.disabled = false;
+            ui.detalhe.btnReexecute.textContent = "REEXECUTE";
+        }
+    }
+}
+
 async function handleEmailRegister() {
     if (ui.btnSubmit) ui.btnSubmit.disabled = true;
     try {
@@ -752,6 +806,10 @@ function renderIncidentesList(list) {
 
         clone.querySelector('.incident-rule-name').textContent = inc.nome_regra || `ID ${inc.id_regra}`;
 
+        const areaDetalhes = clone.querySelector('.incident-details-left');
+        areaDetalhes.style.cursor = 'pointer'; 
+        areaDetalhes.onclick = () => openDetalheIncidente(inc.id_incidente);
+
         const prio = clone.querySelector('.incident-priority');
         prio.textContent = formatPrioridade(inc.prioridade_registro);
         prio.dataset.priority = inc.prioridade_registro;
@@ -783,8 +841,139 @@ function renderIncidentesList(list) {
             } catch (e) { showMessage(e.message, 'error'); btnClose.disabled = false; }
         });
 
+        // Botão detalhamento da regra
+        const btnDetalhes = clone.querySelector('.btn-detalhes');
+        if(btnDetalhes) {
+            btnDetalhes.onclick = (e) => {
+                e.stopPropagation(); // Evita clique duplo se o botão estiver dentro da área
+                openDetalheIncidente(inc.id_incidente);
+            };
+        }
+
         c.appendChild(clone);
     });
+}
+
+async function openDetalheIncidente(id) {
+    currentIncidenteId = id; // Guarda o ID para as ações (ACK/Close)
+    ui.detalhe.modal.style.display = 'flex';
+    
+    // Feedback visual de carregamento
+    ui.detalhe.timeline.innerHTML = '<div style="padding:20px; text-align:center">Carregando histórico...</div>';
+    ui.detalhe.boxJson.textContent = '...';
+
+    try {
+        // 1. Busca dados completos no backend
+        const dados = await fetchApi(`/incidentes/${id}/detalhes`);
+        
+        // 2. Preenche os campos de texto
+        ui.detalhe.lblStatus.textContent = formatStatus(dados.status);
+        ui.detalhe.lblRegra.textContent = dados.nome_regra || 'Regra sem nome';
+        ui.detalhe.lblPlantonista.textContent = dados.nome_usuario_ack || '--';
+        ui.detalhe.lblAbertura.textContent = formatData(dados.data_abertura);
+        ui.detalhe.lblFechamento.textContent = formatData(dados.data_fechamento);
+        ui.detalhe.boxComentario.textContent = dados.comentario_incidente || 'Nenhum comentário.';
+
+        // 3. Preenche o JSON de Erro/Amostra
+        if (dados.dados_amostra) {
+            ui.detalhe.boxJson.textContent = JSON.stringify(dados.dados_amostra, null, 2);
+        } else {
+            ui.detalhe.boxJson.textContent = "Sem dados de amostra registrados.";
+        }
+
+        // 4. Renderiza a Timeline (Histórico)
+        renderTimeline(dados.historico, dados);
+
+        // 5. Atualiza estado dos botões (Habilita/Desabilita conforme status)
+        updateActionButtons(dados.status);
+
+    } catch (e) {
+        alert("Erro ao carregar detalhes: " + e.message);
+        closeDetalheModal();
+    }
+}
+
+function closeDetalheModal() { 
+    // Garante que pega o elemento, mesmo se a referência ui falhar
+    const modal = document.getElementById('modal-detalhes-incidente');
+    if(modal) {
+        modal.style.display = 'none';
+    }
+    currentIncidenteId = null; 
+}
+
+// Helper para habilitar/desabilitar botões
+function updateActionButtons(status) {
+    ui.detalhe.btnAck.disabled = false;
+    ui.detalhe.btnCloseInc.disabled = false;
+    
+    if (status === 'ABERTO') {
+        ui.detalhe.btnCloseInc.disabled = true; // Força fluxo: Aberto -> ACK -> Close
+    } else if (status === 'RECONHECIDO') {
+        ui.detalhe.btnAck.disabled = true;
+    } else if (status === 'FECHADO') {
+        ui.detalhe.btnAck.disabled = true;
+        ui.detalhe.btnCloseInc.disabled = true;
+    }
+}
+
+function renderTimeline(historico, dadosIncidente) {
+    const container = ui.detalhe.timeline;
+    container.innerHTML = '';
+
+    const eventos = historico || [];
+
+    // Renderiza os logs vindos do banco
+    eventos.forEach(log => {
+        const div = document.createElement('div');
+        let classeCor = '';
+        let titulo = '';
+        
+        // CORREÇÃO CRÍTICA: Verifica se já é objeto ou string antes de parsear
+        let meta = {};
+        if (typeof log.dados_novos === 'string') {
+            try { meta = JSON.parse(log.dados_novos); } catch(e) {}
+        } else {
+            meta = log.dados_novos || {};
+        }
+
+        // Lógica de Cores e Títulos (ACK Amarelo / CLOSE Verde)
+        // Verifica tanto a 'acao' quanto o 'status' para garantir
+        if (meta.acao === 'ACK' || meta.status === 'RECONHECIDO') {
+            classeCor = 'acao-ACK';
+            titulo = `ACK por ${log.nome_usuario || 'Sistema'}`;
+        } else if (meta.status === 'FECHADO' || meta.acao === 'CLOSE') {
+            classeCor = 'acao-CLOSE';
+            titulo = `CLOSE por ${log.nome_usuario || 'Sistema'}`;
+        } else if (meta.msg || meta.acao === 'INSERT') { // Reexecute cai aqui
+            classeCor = 'acao-CREATE'; 
+            // Se for reexecute, mostra título específico
+            if (meta.msg && meta.msg.includes('Reexecução')) {
+                titulo = `Reexecução solicitada por ${log.nome_usuario || 'Sistema'}`;
+            } else {
+                titulo = `Registro por ${log.nome_usuario || 'Sistema'}`;
+            }
+        } else {
+            titulo = `Atualização por ${log.nome_usuario || 'Sistema'}`;
+        }
+
+        div.className = `timeline-item ${classeCor}`;
+        div.innerHTML = `
+            <div class="timeline-header">${titulo}</div>
+            <div class="timeline-date">${formatData(log.data_alteracao)}</div>
+        `;
+        container.appendChild(div);
+    });
+
+    // Evento de Criação (Fixo no final)
+    const divCreate = document.createElement('div');
+    divCreate.className = 'timeline-item acao-CREATE';
+    divCreate.innerHTML = `
+        <div class="timeline-header">Incidente Criado</div>
+        <div class="timeline-desc">Sistema detectou falha na regra.</div>
+        <div class="timeline-date">${formatData(dadosIncidente.data_abertura)}</div>
+    `;
+    container.appendChild(divCreate);
 }
 
 // --- Regras ---

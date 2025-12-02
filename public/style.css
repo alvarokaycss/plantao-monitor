@@ -390,9 +390,9 @@ button:disabled {
     color: #636315;
 }
 .incident-priority[data-priority="3"] {
-    background-color: var(--cor-prio-baixa-fundo);
-    border-color: var(--cor-status-fechado);
-    color: var(--cor-status-fechado);
+    background-color: #CDF7D4;
+    border-color: var(--cor-texto-principal);
+    color: var(--cor-texto-principal);
 }
 
 
@@ -1113,4 +1113,129 @@ button:disabled {
 /* Utilitário para esconder elementos (usado no toggle Login/Cadastro) */
 .hidden {
     display: none !important;
+}
+/* ============================================== */
+/* MODAL DETALHES INCIDENTE (FINAL)               */
+/* ============================================== */
+
+.modal-detalhe-card {
+    max-width: 1000px;
+    width: 95%;
+}
+
+/* Header alinhado: Título na esq, X na direita */
+.modal-header {
+    display: flex;
+    justify-content: space-between; 
+    align-items: center;
+    background-color: #2C5132;
+    color: white;
+    padding: 16px 24px;
+}
+
+.btn-close-modal {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-close-modal img {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1); 
+    transition: transform 0.2s;
+}
+.btn-close-modal:hover img { transform: scale(1.1); }
+
+/* Layout Grid */
+.detalhe-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    padding: 24px;
+    background-color: #F8F9FA;
+}
+
+/* Coluna Esquerda */
+.detalhe-col-historico {
+    border-right: 1px solid #ddd;
+    padding-right: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.detalhe-acoes-box {
+    margin-top: 25px;
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+/* TIMELINE (CORES CORRIGIDAS) */
+.timeline-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.timeline-item {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    border-left: 4px solid #2C5132; /* Padrão */
+    position: relative;
+}
+
+/* ACK = AMARELO (Fundo e Borda) */
+.timeline-item.acao-ACK { 
+    border-left-color: #F3C810; 
+}
+
+/* CLOSE = VERDE (Fundo e Borda) */
+.timeline-item.acao-CLOSE { 
+    border-left-color: #388E3C; 
+}
+
+/* CREATE/REEXECUTE = Vermelho/Padrão */
+.timeline-item.acao-CREATE { 
+    border-left-color: #761818; 
+}
+
+.timeline-header { font-weight: bold; font-size: 14px; color: #333; margin-bottom: 4px; }
+.timeline-date { font-size: 11px; color: #666; text-align: right; margin-top: 5px; font-style: italic; }
+
+/* Coluna Direita */
+.detalhe-col-info { display: flex; flex-direction: column; gap: 20px; }
+.detalhe-info-box p { margin: 6px 0; font-size: 14px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+
+/* Títulos */
+.detalhe-col-historico h4, .detalhe-erro-box h5, .detalhe-acoes-box h5, .detalhe-comentario-box h5 {
+    color: #2C5132; font-weight: bold; margin-bottom: 10px; font-size: 16px;
+}
+
+#detalhe-json-erro {
+    background-color: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 10px;
+    font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;
+    white-space: pre-wrap; color: #d63384;
+}
+
+/* Botões de Ação */
+.acoes-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.btn-ack-full { background: #FFF9C4; color: #FBC02D; border: 1px solid #FBC02D; width: 100%; text-align: left; padding: 12px; font-weight: bold; }
+.btn-close-full { background: #E8F5E9; color: #388E3C; border: 1px solid #388E3C; width: 100%; text-align: left; padding: 12px; font-weight: bold; }
+.btn-reexecute { background: #F5F5F5; color: #616161; border: 1px solid #9E9E9E; width: 100%; text-align: left; padding: 12px; font-weight: bold; }
+
+.comentario-read-only { background-color: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 10px; min-height: 60px; color: #555; font-style: italic; }
+
+@media (max-width: 800px) {
+    .detalhe-body { grid-template-columns: 1fr; }
+    .detalhe-col-historico { border-right: none; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
 }

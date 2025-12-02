@@ -50,25 +50,22 @@ exports.getIncidenteDetalhes = async (req, res) => {
  */
 exports.ackIncident = async (req, res) => {
     const idIncidenteVal = asInteger(req.params.id);
-    const idUsuarioVal = req.user.id_usuario; // ID do usuário vem do checkAuth (req.user)
+    const idUsuarioVal = req.user.id_usuario; 
 
     if (!idIncidenteVal || !idUsuarioVal) {
-        return res.status(400).json({ error: "ID do incidente e id_usuario_ack são obrigatórios e devem ser inteiros." });
+        return res.status(400).json({ error: "ID obrigatório." });
     }
 
     try {
         const rows = await IncidentesService.ackIncident(idIncidenteVal, idUsuarioVal);
 
         if (!rows) {
-            return res.status(409).json({ error: "Incidente não encontrado ou já estava Reconhecido/Fechado." });
+            return res.status(409).json({ error: "Incidente não encontrado ou status inválido para ACK." });
         }
         
-        res.json(rows); // Retorna o incidente atualizado
+        res.json(rows); 
 
     } catch (error) {
-        if (error && error.code === "23503") {
-            return res.status(404).json({ error: "Usuário (id_usuario_ack) não encontrado." });
-        }
         console.error(`ERROR ackIncident (${idIncidenteVal}):`, error);
         res.status(500).json({ error: "Erro interno ao reconhecer incidente" });
     }
@@ -86,23 +83,47 @@ exports.closeIncident = async (req, res) => {
     const comentarioVal = (comentario_incidente && String(comentario_incidente).trim()) ? String(comentario_incidente).trim() : null;
 
     if (!idIncidenteVal || !idUsuarioVal) {
-        return res.status(400).json({ error: "ID do incidente e id_usuario_fechamento são obrigatórios." });
+        return res.status(400).json({ error: "ID obrigatório." });
     }
 
     try {
         const rows = await IncidentesService.closeIncident(idIncidenteVal, idUsuarioVal, comentarioVal);
 
         if (!rows) {
-            return res.status(409).json({ error: "Incidente não encontrado ou não estava 'Reconhecido' (deve-se dar ACK primeiro)." });
+            return res.status(409).json({ error: "Incidente não encontrado." });
         }
         
-        res.json(rows); // Retorna o incidente atualizado
+        res.json(rows); 
 
     } catch (error) {
-        if (error && error.code === "23503") {
-            return res.status(404).json({ error: "Usuário (id_usuario_fechamento) não encontrado." });
-        }
         console.error(`ERROR closeIncident (${idIncidenteVal}):`, error);
         res.status(500).json({ error: "Erro interno ao fechar incidente" });
+    }
+};
+
+/**
+ * POST /incidentes/:id/reexecute
+ * Agenda a regra do incidente para rodar novamente.
+ */
+exports.reexecuteIncident = async (req, res) => {
+    const idIncidenteVal = asInteger(req.params.id);
+    const idUsuarioVal = req.user.id_usuario;
+
+    if (!idIncidenteVal) {
+        return res.status(400).json({ error: "ID do incidente inválido." });
+    }
+
+    try {
+        const result = await IncidentesService.reexecuteIncident(idIncidenteVal, idUsuarioVal);
+        
+        if (!result) {
+            return res.status(404).json({ error: "Incidente não encontrado." });
+        }
+
+        res.json(result);
+
+    } catch (error) {
+        console.error(`ERROR reexecuteIncident (${idIncidenteVal}):`, error);
+        res.status(500).json({ error: "Erro ao agendar reexecução." });
     }
 };

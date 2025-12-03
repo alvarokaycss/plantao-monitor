@@ -47,10 +47,12 @@ exports.getIncidenteDetalhes = async (req, res) => {
 /**
  * POST /incidentes/:id/ack
  * Reconhece um incidente (muda status para RECONHECIDO).
+ * AGORA COM WEBSOCKET REAL-TIME
  */
 exports.ackIncident = async (req, res) => {
     const idIncidenteVal = asInteger(req.params.id);
     const idUsuarioVal = req.user.id_usuario; 
+    const nomeUsuario = req.user.nome || "Usuário";
 
     if (!idIncidenteVal || !idUsuarioVal) {
         return res.status(400).json({ error: "ID obrigatório." });
@@ -63,6 +65,16 @@ exports.ackIncident = async (req, res) => {
             return res.status(409).json({ error: "Incidente não encontrado ou status inválido para ACK." });
         }
         
+        // --- EMITIR EVENTO REAL-TIME ---
+        // Avisa todos os clientes conectados para atualizarem suas telas
+        if (req.io) {
+            req.io.emit("dashboard_update", { 
+                mensagem: `Incidente #${idIncidenteVal} reconhecido (ACK) por ${nomeUsuario}.`,
+                tipo: "ACK",
+                id_incidente: idIncidenteVal
+            });
+        }
+
         res.json(rows); 
 
     } catch (error) {
@@ -74,10 +86,12 @@ exports.ackIncident = async (req, res) => {
 /**
  * POST /incidentes/:id/close
  * Fecha um incidente (muda status para FECHADO).
+ * AGORA COM WEBSOCKET REAL-TIME
  */
 exports.closeIncident = async (req, res) => {
     const idIncidenteVal = asInteger(req.params.id);
     const idUsuarioVal = req.user.id_usuario;
+    const nomeUsuario = req.user.nome || "Usuário";
     const { comentario_incidente } = req.body;
     
     const comentarioVal = (comentario_incidente && String(comentario_incidente).trim()) ? String(comentario_incidente).trim() : null;
@@ -93,6 +107,15 @@ exports.closeIncident = async (req, res) => {
             return res.status(409).json({ error: "Incidente não encontrado." });
         }
         
+        // --- EMITIR EVENTO REAL-TIME ---
+        if (req.io) {
+            req.io.emit("dashboard_update", { 
+                mensagem: `Incidente #${idIncidenteVal} FECHADO por ${nomeUsuario}.`,
+                tipo: "CLOSE",
+                id_incidente: idIncidenteVal
+            });
+        }
+
         res.json(rows); 
 
     } catch (error) {
@@ -104,10 +127,12 @@ exports.closeIncident = async (req, res) => {
 /**
  * POST /incidentes/:id/reexecute
  * Agenda a regra do incidente para rodar novamente.
+ * AGORA COM WEBSOCKET REAL-TIME
  */
 exports.reexecuteIncident = async (req, res) => {
     const idIncidenteVal = asInteger(req.params.id);
     const idUsuarioVal = req.user.id_usuario;
+    const nomeUsuario = req.user.nome || "Usuário";
 
     if (!idIncidenteVal) {
         return res.status(400).json({ error: "ID do incidente inválido." });
@@ -118,6 +143,15 @@ exports.reexecuteIncident = async (req, res) => {
         
         if (!result) {
             return res.status(404).json({ error: "Incidente não encontrado." });
+        }
+
+        // --- EMITIR EVENTO REAL-TIME (Depois alterar para nome da Regra)
+        if (req.io) {
+            req.io.emit("dashboard_update", { 
+                mensagem: `Reexecução solicitada para incidente #${idIncidenteVal} por ${nomeUsuario}.`,
+                tipo: "REEXECUTE",
+                id_incidente: idIncidenteVal
+            });
         }
 
         res.json(result);

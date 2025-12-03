@@ -11,7 +11,8 @@
     <!-- Carrega o App e o Auth (necessários para login) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
+    <!-- Configuração para o navegador ouvir o evento de dashboard update -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 
 <body>
@@ -680,6 +681,68 @@
                         <div id="detalhe-ultimo-comentario" class="comentario-read-only">--</div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Reexecute -->
+    <div id="modal-reexecute-confirm" class="modal-overlay" style="display: none;">
+        <div class="modal-card modal-confirm-card">
+            <div class="modal-confirm-body">
+
+                <h3 class="modal-confirm-title">
+                    Reexecutar Regra
+                </h3>
+
+                <p class="modal-confirm-text">
+                    Tem certeza que deseja forçar a reexecução imediata desta regra?
+                    <br>
+                    <span style="font-size: 12px; color: #666;">(Isso agendará uma nova execução na fila do
+                        Runner)</span>
+                </p>
+
+                <div class="modal-confirm-actions">
+                    <button type="button" class="btn-cancel btn-modal-action" id="btn-reexec-fechar">
+                        Cancelar
+                    </button>
+
+                    <button type="button" class="btn-confirm btn-modal-action" id="btn-reexec-confirmar">
+                        Confirmar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fechar Incidente -->
+    <div id="modal-close-incident" class="modal-overlay" style="display: none;">
+        <div class="modal-card modal-confirm-card">
+            <div class="modal-confirm-body">
+                <h3 class="modal-confirm-title" style="color: #2C5132;">
+                    Fechar Incidente
+                </h3>
+
+                <p class="modal-confirm-text">
+                    Descreva a solução aplicada ou o motivo do fechamento.
+                </p>
+
+                <div style="text-align: left; margin-bottom: 20px;">
+                    <textarea id="close-comment-input" rows="4"
+                        style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; resize: vertical;"
+                        placeholder="Ex: Reiniciado o serviço e validado logs..."></textarea>
+                </div>
+
+                <div class="modal-confirm-actions">
+                    <button type="button" class="btn-cancel btn-modal-action" id="btn-close-modal-fechar">
+                        Cancelar
+                    </button>
+
+                    <button type="button" class="btn-confirm btn-modal-action" id="btn-close-modal-confirmar">
+                        Fechar
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>

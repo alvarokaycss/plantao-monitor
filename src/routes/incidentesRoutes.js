@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const IncidentesController = require('../controllers/IncidentesController');
-const { checkAuth, R_NENHUM, P_TODOS, checkPermission } = require('../middleware/authMiddleware');
+const { checkAuth, R_NENHUM, P_TODOS, P_ADMIN_OP, checkPermission } = require('../middleware/authMiddleware');
 
 // Middleware de autenticação aplicado a todas as rotas de incidentes
 router.use(checkAuth); 
@@ -22,19 +22,19 @@ router.get("/:id/detalhes",
 
 // POST /incidentes/:id/ack
 router.post("/:id/ack", 
-    checkPermission(R_NENHUM, P_TODOS),
+    checkPermission(R_NENHUM, P_ADMIN_OP),
     IncidentesController.ackIncident
 );
 
 // POST /incidentes/:id/close
 router.post("/:id/close", 
-    checkPermission(R_NENHUM, P_TODOS),
+    checkPermission(R_NENHUM, P_ADMIN_OP),
     IncidentesController.closeIncident
 );
 
 // POST /incidentes/:id/reexecute
 router.post("/:id/reexecute",
-    checkPermission(R_NENHUM, P_TODOS),
+    checkPermission(R_NENHUM, P_ADMIN_OP),
     IncidentesController.reexecuteIncident
 );
 

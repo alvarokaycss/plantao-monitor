@@ -146,8 +146,55 @@ const ui = {
 };
 
 // ==============================================
-// 2. INICIALIZAÇÃO (INIT)
+// 2. INICIALIZAÇÃO (INIT) E WebSocket 
 // ==============================================
+
+// Variável do socket
+let socket = null;
+
+function setupWebSocket() {
+    // Garante que o io existe (evita erro se a CDN falhar)
+    if (typeof io === 'undefined') {
+        console.error("Erro: Biblioteca Socket.IO não carregada. Verifique o index.html");
+        return;
+    }
+
+    socket = io(BASE_URL);
+
+    socket.on("connect", () => {
+        console.log(" WebSocket conectado! ID:", socket.id);
+    });
+
+    socket.on("dashboard_update", async (data) => {
+        console.log(" UPDATE RECEBIDO:", data);
+        
+        // Feedback visual (Toast)
+        showMessage(` ${data.mensagem}`, 'sucess');
+
+        // --- CORREÇÃO DA VERIFICAÇÃO DE TELA ATIVA ---
+        // Em vez de checar o display da div, checamos se o botão da navbar está ativo.
+        // É mais seguro e consistente.
+        const navIncidentes = document.querySelector('a[data-view="incidentes"]');
+        const isIncidentesActive = navIncidentes && navIncidentes.classList.contains('active');
+
+        if (isIncidentesActive) {
+            console.log(" Tela de Incidentes visível. Recarregando lista...");
+            loadIncidentesView(true); // true = modo silencioso (sem piscar)
+        } else {
+            console.log(" Evento ignorado (Usuário não está na tela de incidentes).");
+        }
+
+        // --- ATUALIZAÇÃO DO MODAL ---
+        const modalDetalhes = document.getElementById('modal-detalhes-incidente');
+        const isModalOpen = modalDetalhes && modalDetalhes.style.display === 'flex';
+        
+        if (isModalOpen && currentIncidenteId && data.id_incidente && 
+            Number(currentIncidenteId) === Number(data.id_incidente)) {
+            console.log(" Atualizando modal aberto...");
+            await openDetalheIncidente(currentIncidenteId);
+        }
+    });
+}
 
 function init() {
     console.log('Plantão Monitor iniciando...');
@@ -242,6 +289,12 @@ function init() {
 
     // 11. Configura e incializa gráfico
     setupAnalyticsListener();
+
+    // 12. Configura botões do Modal de Detalhes
+    setupDetalheListeners();
+
+    // 13. Configura atualização em tempo real
+    setupWebSocket();
 }
 
 // ==============================================
@@ -362,6 +415,51 @@ function setupGenericModalListeners() {
             }
         };
     }
+
+    // --- 4. MODAL REEXECUTAR REGRA  ---
+    const btnReexecClose = document.getElementById('btn-reexec-fechar');
+    const btnReexecConfirm = document.getElementById('btn-reexec-confirmar');
+    const modalReexec = document.getElementById('modal-reexecute-confirm');
+
+    if (btnReexecClose && modalReexec) {
+        btnReexecClose.onclick = () => {
+            modalReexec.style.display = 'none';
+            window.idIncidenteParaReexecutar = null; // Limpa a variável
+        };
+    }
+
+    if (btnReexecConfirm && modalReexec) {
+        btnReexecConfirm.onclick = async () => {
+            if (!window.idIncidenteParaReexecutar) return;
+
+            // Feedback Visual
+            const originalText = btnReexecConfirm.textContent;
+            btnReexecConfirm.textContent = "Agendando...";
+            btnReexecConfirm.disabled = true;
+
+            try {
+                await fetchApi(`/incidentes/${window.idIncidenteParaReexecutar}/reexecute`, { method: 'POST' });
+                
+                showMessage("Reexecução agendada com sucesso!", "success");
+                modalReexec.style.display = 'none';
+                
+                // Fecha também o modal de detalhes, pois a ação foi concluída (opcional)
+                // closeDetalheModal(); 
+                
+                // Ou apenas atualiza a lista de fundo
+                loadIncidentesView();
+
+            } catch (error) {
+                console.error(error);
+                showMessage("Erro ao reexecutar: " + error.message, "error");
+            } finally {
+                // Limpeza
+                window.idIncidenteParaReexecutar = null;
+                btnReexecConfirm.textContent = originalText;
+                btnReexecConfirm.disabled = false;
+            }
+        };
+    }
 }
 
 function setupAnalyticsListener() {
@@ -410,6 +508,105 @@ function setupAnalyticsListener() {
                 btnGerarAnalytics.disabled = false;
             }
         });
+    }
+}
+
+/**
+ * Configura os botões de ação dentro do Modal de Detalhes (ACK, CLOSE, REEXECUTE)
+ * E configura o novo Modal de Fechamento.
+ */
+function setupDetalheListeners() {
+    // Referências do Modal de Detalhes
+    const btnAck = ui.detalhe.btnAck;
+    const btnClose = ui.detalhe.btnCloseInc;
+    const btnReexecute = ui.detalhe.btnReexecute;
+
+    // Referências do Novo Modal de Fechamento
+    const modalClose = document.getElementById('modal-close-incident');
+    const btnModalCloseCancel = document.getElementById('btn-close-modal-fechar');
+    const btnModalCloseConfirm = document.getElementById('btn-close-modal-confirmar');
+    const inputComment = document.getElementById('close-comment-input');
+
+    // --- 1. Ação ACK (Reconhecer) ---
+    if (btnAck) {
+        btnAck.onclick = async () => {
+            if (!currentIncidenteId) return;
+            
+            const originalText = btnAck.textContent;
+            btnAck.textContent = "Processando...";
+            btnAck.disabled = true;
+
+            try {
+                await fetchApi(`/incidentes/${currentIncidenteId}/ack`, { method: 'POST' });
+                showMessage('Incidente Reconhecido!', 'success');
+                await openDetalheIncidente(currentIncidenteId);
+                loadIncidentesView();
+            } catch (e) {
+                showMessage("Erro ao reconhecer: " + e.message, 'error');
+                btnAck.textContent = originalText;
+                btnAck.disabled = false;
+            }
+        };
+    }
+
+    // --- 2. Ação CLOSE (Abrir Modal) ---
+    if (btnClose) {
+        btnClose.onclick = () => {
+            if (!currentIncidenteId) return;
+            // Limpa o campo e abre o modal
+            inputComment.value = ''; 
+            modalClose.style.display = 'flex';
+            // Foca no campo de texto para melhor UX
+            setTimeout(() => inputComment.focus(), 100);
+        };
+    }
+
+    // --- 2.1 Confirmar Fechamento (Dentro do Modal) ---
+    if (btnModalCloseConfirm) {
+        btnModalCloseConfirm.onclick = async () => {
+            const comentario = inputComment.value.trim();
+            if (!comentario) {
+                showMessage("O comentário é obrigatório para fechar o incidente.", "error")
+                return;
+            }
+
+            // UI Feedback
+            const originalText = btnModalCloseConfirm.textContent;
+            btnModalCloseConfirm.textContent = "Fechando...";
+            btnModalCloseConfirm.disabled = true;
+
+            try {
+                await fetchApi(`/incidentes/${currentIncidenteId}/close`, { 
+                    method: 'POST',
+                    body: JSON.stringify({ comentario_incidente: comentario })
+                });
+                
+                showMessage('Incidente Fechado!', 'success');
+                modalClose.style.display = 'none'; // Fecha o modal de comentário
+                
+                // Atualiza o modal de detalhes e a lista
+                await openDetalheIncidente(currentIncidenteId);
+                loadIncidentesView();
+
+            } catch (e) {
+                showMessage("Erro ao fechar: " + e.message, 'error');
+            } finally {
+                btnModalCloseConfirm.textContent = originalText;
+                btnModalCloseConfirm.disabled = false;
+            }
+        };
+    }
+
+    // --- 2.2 Cancelar Fechamento ---
+    if (btnModalCloseCancel) {
+        btnModalCloseCancel.onclick = () => {
+            modalClose.style.display = 'none';
+        };
+    }
+
+    // --- 3. Ação REEXECUTE ---
+    if (btnReexecute) {
+        btnReexecute.onclick = handleDetalheReexecute;
     }
 }
 
@@ -559,7 +756,7 @@ window.openUsuarioModal = async (modeOrId) => {
         ui.usuarios.campoAtivo.value = 'true';
         renderRecursosCheckboxes([]);
         renderNotificacaoCampos([]);
-        showMessage('Use este modal apenas para pré-configuração.', 'info');
+        showMessage('Use este modal apenas para pré-configuração.', 'sucess');
     }
     ui.usuarios.modal.style.display = 'flex';
 };
@@ -574,12 +771,28 @@ async function fetchApi(url, options = {}) {
         auth.signOut();
         throw new Error("Token inválido.");
     }
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
-        ...options.headers
+
+    // Configuração robusta para evitar cache
+    const finalOptions = {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+            ...options.headers
+        },
+        // O SEGREDO DO REAL-TIME:
+        // 'no-store': O navegador nunca armazena a resposta.
+        // 'reload': Força a ir na rede buscar dados novos.
+        cache: 'no-store' 
     };
-    const res = await fetch(`${BASE_URL}${url}`, { ...options, headers });
+
+    // Adiciona um timestamp na URL para garantir que proxies e CDNs também não cacheiem
+    // (Ex: /incidentes?_t=123456789)
+    const separator = url.includes('?') ? '&' : '?';
+    const urlWithTimestamp = `${BASE_URL}${url}${separator}_t=${new Date().getTime()}`;
+
+    const res = await fetch(urlWithTimestamp, finalOptions);
+
     if (!res.ok) {
         let errorData = {};
         try { errorData = await res.json(); } catch (e) { }
@@ -590,6 +803,7 @@ async function fetchApi(url, options = {}) {
         }
         throw new Error(errorData.error || `Erro API: ${res.statusText}`);
     }
+    
     if (res.status === 204) return null;
     return await res.json();
 }
@@ -698,40 +912,17 @@ async function handleEmailLogin() {
     }
 }
 
-async function handleDetalheReexecute() {
-    // Validação de segurança
+// Ação inicial ao clicar no botão "REEXECUTE" na tela de detalhes
+function handleDetalheReexecute() {
+    // Validação básica
     if (!currentIncidenteId) {
-        alert("Erro: Nenhum incidente selecionado.");
+        showMessage("Erro: Nenhum incidente selecionado.", "error");
         return;
     }
 
-    if (!confirm("Tem certeza que deseja reexecutar a regra deste incidente agora?")) return;
-
-    // Feedback visual imediato
-    ui.detalhe.btnReexecute.disabled = true;
-    ui.detalhe.btnReexecute.textContent = "Enviando...";
-
-    try {
-        await fetchApi(`/incidentes/${currentIncidenteId}/reexecute`, { method: 'POST' });
-        
-        // Sucesso
-        alert("Reexecução enviada para a fila com sucesso!");
-        
-        // Fecha o modal pois a ação foi concluída
-        closeDetalheModal();
-        
-        // Atualiza a lista de fundo
-        loadIncidentesView();
-
-    } catch (e) {
-        alert("Erro ao reexecutar: " + e.message);
-    } finally {
-        // Restaura botão caso o modal seja reaberto sem refresh
-        if(ui.detalhe.btnReexecute) {
-            ui.detalhe.btnReexecute.disabled = false;
-            ui.detalhe.btnReexecute.textContent = "REEXECUTE";
-        }
-    }
+    // Em vez de window.confirm(), abrimos nosso modal lindo
+    window.idIncidenteParaReexecutar = currentIncidenteId; // Guarda o ID numa var global temporária
+    document.getElementById('modal-reexecute-confirm').style.display = 'flex';
 }
 
 async function handleEmailRegister() {
@@ -762,13 +953,25 @@ async function navigateTo(viewName) {
 }
 
 // --- Incidentes ---
-async function loadIncidentesView() {
-    ui.incidentes.listContainer.innerHTML = 'Carregando...';
+async function loadIncidentesView(isBackgroundUpdate = false) {
+    // Só mostra o "Carregando..." se for a primeira carga (não for background)
+    if (!isBackgroundUpdate) {
+        ui.incidentes.listContainer.innerHTML = '<div class="loading-placeholder">Carregando dados...</div>';
+    }
+    
     try {
-        const [kpi, list] = await Promise.all([fetchApi('/kpis'), fetchIncidentes()]);
+        // Faz as requisições (agora sem cache!)
+        const [kpi, list] = await Promise.all([ fetchApi('/kpis'), fetchIncidentes() ]);
+        
+        // Renderiza tudo
         renderKPIs(kpi);
         renderIncidentesList(list);
-    } catch (e) { ui.incidentes.listContainer.innerHTML = 'Erro ao carregar.'; }
+    } catch (e) { 
+        console.error(e);
+        if (!isBackgroundUpdate) {
+            ui.incidentes.listContainer.innerHTML = '<div class="loading-placeholder" style="color:red">Erro ao carregar dados.</div>'; 
+        }
+    }
 }
 
 async function fetchIncidentes() {
@@ -1035,9 +1238,8 @@ function setupRegrasFilters() {
 }
 
 // --- CRUD Regra ---
-// --- CRUD Regra (CORRIGIDO) ---
 async function setupRegraForm() {
-    // 1. Popula Prioridades (Fixo) - ISSO ESTAVA FALTANDO
+    // 1. Popula Prioridades (Fixo)
     ui.regras.campoPrioridade.innerHTML = `
         <option value="3">Baixa</option>
         <option value="2">Média</option>

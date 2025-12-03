@@ -486,6 +486,12 @@ button:disabled {
     color: #842029;
 }
 
+.msg.info {     
+    background: #e6f7ec;
+    border-color: #b7e1c7;
+    color: #0f5132;
+}
+
 /* ============================================== */
 /* 7. Estilos da Tela de Login (RF01)      */
 /* ============================================== */

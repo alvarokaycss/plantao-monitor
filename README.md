@@ -1,53 +1,64 @@
-# Plantão Monitor - Sistema de Gestão de Plantão
+# 📊 Plantão Monitor
 
-Sistema para monitoramento de regras de banco de dados, geração de incidentes e notificações.
+Sistema Web de Gestão de Plantão e Monitoramento de Banco de Dados.
 
-## Pré-requisitos
+O **Plantão Monitor** automatiza a execução de regras de negócio (queries SQL), detecta anomalias, gera incidentes, notifica plantonistas e oferece um painel em tempo real para gestão de operações críticas.
 
-- Node.js (v14+)
-- Python (v3.8+)
-- PostgreSQL (Rodando localmente)
+---
 
-## Como Rodar Localmente (Passo a Passo)
+## 🚀 Tecnologias Utilizadas
 
-### 1. Configuração do Banco de Dados
-1. Crie um banco de dados no Postgres (ex: `plantao_monitor`).
-2. Execute os scripts da pasta `database/migrations` na ordem numérica (001, 002...) para criar as tabelas.
-3. Configure o arquivo `.env` na raiz do projeto:
-   ```env
-   DATABASE_URL=postgres://usuario:senha@localhost:5432/plantao_monitor
-   DB_SCHEMA=public
-   PORT=8000
+**Backend (API & Gestão):**
+- **Node.js** com Express
+- **Socket.io** (Comunicação Real-Time)
+- **Firebase Admin SDK** (Autenticação)
+- **PostgreSQL** (Banco de dados principal)
 
-# Instalar dependências
-npm install
+**Runner & Analytics (Motor de Execução):**
+- **Python 3.8+**
+- **Psycopg** (Conexão com Banco)
+- **Pandas & Matplotlib** (Geração de Relatórios/Gráficos)
+- **Schedule** (Agendamento de Tarefas)
 
-# Rodar a API
-npm start
-# Ou: node api_qq_monitor.js
+**Frontend:**
+- HTML5, CSS3, JavaScript (Vanilla ES6+)
+- Firebase Client SDK
 
-Acesse http//localhost:8000 através do terminal
+---
 
-### 2. Configuração do Firebase
-...
+## 📋 Pré-requisitos
 
-# **CONFIGURAÇÃO SUPERADMIN**
+Antes de começar, certifique-se de ter instalado:
+- [Node.js](https://nodejs.org/) (v14 ou superior)
+- [Python](https://www.python.org/) (v3.8 ou superior)
+- [PostgreSQL](https://www.postgresql.org/)
+- Conta no [Firebase](https://firebase.google.com/) (Projeto configurado com Authentication)
 
-1. Realize o cadastro via UI na plataforma depois de acessar o link.
-2. Acesse o seu Dbeaver e rode o script na pasta `database/seed/002_seeds_admin_user.sql`.
-**ATENÇÃO: LEIA O `README_DATABASE.md` antes de rodar as seeds.**
+---
 
-## PYTHON ## 
+## ⚙️ Configuração e Instalação
 
-# Criar e ativar ambiente virtual (Recomendado)
-python -m venv .venv
-# Windows: .venv\Scripts\activate
+### 1. Banco de Dados
+1. Crie um banco de dados no PostgreSQL (ex: `plantao_monitor`).
+2. Execute os scripts SQL localizados em `database/migrations` na ordem correta:
+   - `001_schema_inicial.sql` (Criação de tabelas base)
+   - `002_adiciona_fila_runner.sql` (Tabela de fila do Python)
+3. (Opcional) Popule com dados iniciais rodando o script em `database/seed/001_seeds_iniciais.sql`.
 
-# Instalar dependências
-pip install -r requirements.txt
+### 2. Variáveis de Ambiente (.env)
+Crie um arquivo `.env` na raiz do projeto e configure as variáveis:
 
-# --- TERMINAL A: O orquestrador ---
-python src/runner/orquestrador.py
+```env
+# Configuração do Servidor
+PORT=8000
+NODE_ENV=development
 
-# --- TERMINAL B: O Executor (Worker) ---
-python src/runner/executor.py
+# Banco de Dados
+DATABASE_URL=postgres://usuario:senha@localhost:5432/plantao_monitor
+DB_SCHEMA=public
+
+# (Opcional) Configuração de SMTP para envio de e-mails pelo Python
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=seu-email@gmail.com
+SMTP_PASSWORD=sua-senha-de-app

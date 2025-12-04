@@ -3,7 +3,10 @@
 const express = require('express');
 const router = express.Router();
 const UsuariosController = require('../controllers/UsuariosController');
-const { checkAuth, checkPermission, R_USUARIOS, P_ADMIN, P_TODOS } = require('../middleware/authMiddleware');
+const { checkAuth, checkPermission, R_USUARIOS, P_ADMIN, P_TODOS, R_NENHUM } = require('../middleware/authMiddleware');
+
+// Rota publica de registro de usuário
+router.post("/register", UsuariosController.registerUser);
 
 // Rotas /usuarios/*
 router.use(checkAuth); 
@@ -16,7 +19,7 @@ router.get("/",
 
 // GET /usuarios/eu/detalhes (Qualquer usuário logado pode ver o próprio perfil)
 router.get("/eu/detalhes", 
-    checkPermission(R_USUARIOS, P_TODOS), // Requer recurso TELA_USUARIOS (ou P_TODOS se for só a rota)
+    checkPermission(R_NENHUM, P_TODOS),
     UsuariosController.getMeuDetalhe
 );
 

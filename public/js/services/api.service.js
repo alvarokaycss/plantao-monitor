@@ -27,7 +27,6 @@ export async function fetchApi(endpoint, options = {}) {
         cache: 'no-store'
     };
 
-    // Timestamp anti-cache
     const separator = endpoint.includes('?') ? '&' : '?';
     const url = `${BASE_URL}${endpoint}${separator}_t=${new Date().getTime()}`;
 
@@ -40,13 +39,18 @@ export async function fetchApi(endpoint, options = {}) {
                 errorData = await response.json(); 
             } catch (e) { /* Ignora se não for JSON */ }
 
-            // Tratamento específico de erro de sessão
-            if (response.status === 401 || (response.status === 403 && errorData.code === "USER_INACTIVE")) {
+            // Cria um objeto de erro enriquecido com status e código
+            const error = new Error(errorData.error || `Erro API: ${response.statusText}`);
+            error.status = response.status;
+            error.code = errorData.code;
+
+            // Logout automático apenas para erros críticos de sessão, 
+            if (response.status === 401 && error.code !== 'USER_NOT_FOUND_IN_DB') {
                 showMessage(errorData.error || "Sessão inválida.", "error");
                 logout();
             }
 
-            throw new Error(errorData.error || `Erro API: ${response.statusText}`);
+            throw error;
         }
 
         if (response.status === 204) return null;

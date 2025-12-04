@@ -183,7 +183,7 @@ function setupModalsListeners() {
     }
 }
 
-// --- Funções Auxiliares de API (Core Logic) ---
+// --- Funções Auxiliares de API ---
 
 async function performAck(id, btnElement) {
     if(btnElement) { btnElement.disabled = true; }

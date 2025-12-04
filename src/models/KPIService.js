@@ -17,7 +17,6 @@ exports.getKPIsData = async () => {
     `;
 
     // 2. Contagens (Backlog): Mostra TUDO que está pendente (não importa a data), 
-    // pois se está aberto, é problema atual.
     const contagensQuery = `
         SELECT 
             COUNT(*) FILTER (WHERE status = 'ABERTO') AS abertos, 

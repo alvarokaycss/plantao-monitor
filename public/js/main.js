@@ -5,7 +5,8 @@ import { showMessage } from './utils/utils.js';
 import { ui } from './views/base.view.js';
 
 // Services
-import { initAuth } from './services/auth.service.js';
+import { initAuth, logout } from './services/auth.service.js';
+import { fetchApi } from './services/api.service.js';
 
 // Controllers
 import { initAuthController } from './controllers/auth.controller.js';
@@ -16,15 +17,11 @@ import { initAnalyticsController } from "./controllers/analytics.controller.js"
 
 // --- Navegação (SPA) ---
 async function navigateTo(viewName) {
-    // Atualiza classes da navbar
     ui.navLinks.forEach(l => l.classList.toggle('active', l.dataset.view === viewName));
-    
-    // Alterna visibilidade das views
     ui.views.forEach(v => v.style.display = 'none');
     const active = document.getElementById(`view-${viewName}`);
     if (active) active.style.display = 'block';
 
-    // Carrega dados da view específica
     try {
         if (viewName === 'incidentes') await loadIncidentesView();
         if (viewName === 'regras') await loadRegrasView();
@@ -35,32 +32,20 @@ async function navigateTo(viewName) {
 }
 
 // --- WebSocket Setup ---
-// Mantido aqui pois conecta eventos globais com controllers específicos
 function setupWebSocket() {
-    if (typeof io === 'undefined') {
-        console.error("Socket.IO não carregado.");
-        return;
-    }
-
+    if (typeof io === 'undefined') return;
+    // Conexão persistente entre navegador e servidor
     const socket = io(BASE_URL);
-
     socket.on("connect", () => console.log("WebSocket conectado:", socket.id));
-
+    // Listener de atualização do dashboard
     socket.on("dashboard_update", async (data) => {
-        console.log("Update recebido:", data);
         showMessage(`${data.mensagem}`, 'info');
-
-        // Se estiver na tela de incidentes, recarrega a lista
         const navIncidentes = document.querySelector('a[data-view="incidentes"]');
         if (navIncidentes && navIncidentes.classList.contains('active')) {
-            loadIncidentesView(true); // true = update silencioso
+            loadIncidentesView(true);
         }
-
-        // Se o modal de detalhes estiver aberto para este incidente, atualiza
         const modal = document.getElementById('modal-detalhes-incidente');
         if (modal && modal.style.display === 'flex' && data.id_incidente) {
-            // Verifica se o modal aberto é do incidente atualizado (precisamos pegar o ID do controller ou do DOM)
-            // Simplificação: tenta atualizar se estiver visível
             openDetalheIncidente(data.id_incidente).catch(() => {});
         }
     });
@@ -70,14 +55,12 @@ function setupWebSocket() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Plantão Monitor iniciando...');
 
-    // 1. Inicializa Controllers (Listeners de botões, forms, etc)
     initAuthController();
     initIncidentesController();
     initRegrasController();
     initUsuariosController();
     initAnalyticsController();
 
-    // 2. Configura Navegação
     ui.navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -86,25 +69,84 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 3. Inicializa Auth (Gerencia estado Login/App)
-    initAuth((user) => {
+    // 3. Inicializa Auth com Fluxo de Verificação de Cadastro
+    initAuth(async (user) => {
         if (user) {
-            ui.loginStatus.textContent = 'Autenticado.';
-            if (user.displayName && ui.profileButton) {
-                const iniciais = user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2);
-                ui.profileButton.textContent = iniciais.toUpperCase();
-            }
-            // Show App
-            ui.loginView.style.display = 'none';
-            ui.appContainer.style.display = 'block';
-            navigateTo('incidentes');
+            ui.loginStatus.textContent = 'Verificando cadastro...';
             
-            // Inicia WebSocket apenas após login
-            setupWebSocket();
+            try {
+                // Tenta acessar uma rota protegida para verificar se o usuário existe e está ativo no Postgres
+                await fetchApi('/usuarios/eu/detalhes');
+
+                // === SUCESSO: Usuário existe e está ativo ===
+                ui.loginStatus.textContent = 'Autenticado.';
+                if (user.displayName && ui.profileButton) {
+                    const iniciais = user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2);
+                    ui.profileButton.textContent = iniciais.toUpperCase();
+                }
+                
+                // Libera acesso à plataforma
+                ui.loginView.style.display = 'none';
+                ui.appContainer.style.display = 'block';
+                navigateTo('incidentes');
+                setupWebSocket();
+
+            } catch (error) {
+                // === FLUXO DE ERRO DE NEGÓCIO ===
+                
+                // CASO A: Usuário não existe no Postgres -> Auto-Cadastro
+                if (error.code === 'USER_NOT_FOUND_IN_DB') {
+                    ui.loginStatus.textContent = 'Finalizando configuração da conta...';
+                    
+                    try {
+                        const token = await user.getIdToken();
+                        // Chama rota pública de registro
+                        await fetchApi('/usuarios/register', { 
+                            method: 'POST', 
+                            body: JSON.stringify({ idToken: token }) 
+                        });
+
+                        // Feedback e Logout
+                        ui.loginStatus.textContent = 'Cadastro enviado com sucesso! Aguarde a aprovação do administrador para acessar.';
+                        ui.loginStatus.className = 'login-status-text msg success';
+                        
+                        // Força logout do Firebase para impedir acesso "logado porém sem permissão" e limpar estado
+                        setTimeout(() => logout(), 3000);
+
+                    } catch (regError) {
+                        ui.loginStatus.textContent = 'Erro no auto-cadastro: ' + regError.message;
+                        ui.loginStatus.className = 'login-status-text msg error';
+                        setTimeout(() => logout(), 3000);
+                    }
+                } 
+                // CASO B: Usuário existe, mas está inativo (Pendente)
+                else if (error.code === 'USER_INACTIVE') {
+                    ui.loginStatus.textContent = 'Sua conta aguarda aprovação de um administrador.';
+                    ui.loginStatus.className = 'login-status-text msg info';
+                    // Mantém na tela de login
+                    setTimeout(() => logout(), 4000);
+                } 
+                // CASO C: Outro erro (Rede, Servidor)
+                else {
+                    console.error("Erro de verificação de login:", error);
+                    ui.loginStatus.textContent = 'Erro ao conectar ao servidor: ' + error.message;
+                    ui.loginStatus.className = 'login-status-text msg error';
+                    setTimeout(() => logout(), 4000);
+                }
+                
+                // Garante que a app não aparece em caso de erro
+                ui.loginView.style.display = 'flex';
+                ui.appContainer.style.display = 'none';
+            }
+
         } else {
-            // Show Login
+            // Não logado no Firebase
             ui.loginView.style.display = 'flex';
             ui.appContainer.style.display = 'none';
+            // Limpa mensagens antigas se houver
+            if(!ui.loginStatus.classList.contains('msg')) {
+                 ui.loginStatus.textContent = 'Aguardando credenciais...';
+            }
         }
     });
 });

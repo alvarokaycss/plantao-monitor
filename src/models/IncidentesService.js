@@ -171,10 +171,9 @@ exports.closeIncident = async (idIncidenteVal, idUsuarioVal, comentarioVal) => {
                 comentario_incidente = $2
             WHERE
                 id_incidente = $3
-                AND status IN ('RECONHECIDO', 'ABERTO') -- Permitir fechar direto de Aberto se necessário, ou restrinja para 'RECONHECIDO'
+                AND status IN ('RECONHECIDO') 
             RETURNING *;
         `;
-        // Nota: O protótipo às vezes permite fechar direto. Ajustei o WHERE para ser mais flexível, ou mantenha só RECONHECIDO se for regra estrita.
         
         const { rows } = await client.query(updateQuery, [idUsuarioVal, comentarioVal, idIncidenteVal]);
 
@@ -231,7 +230,7 @@ exports.reexecuteIncident = async (idIncidenteVal, idUsuarioVal) => {
         `;
         const resFila = await client.query(insertFila, [idRegra]);
 
-        // 3. Log Auditoria (Opcional: registrar que alguém pediu reexecução)
+        // 3. Log Auditoria registrar que alguém pediu reexecução)
         const logQuery = `
             INSERT INTO ${SCHEMA}.log_auditoria_alteracoes
             (id_usuario, acao, tabela_afetada, id_registro_afetado, dados_novos)

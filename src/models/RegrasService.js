@@ -335,7 +335,7 @@ exports.testarConsultaSql = async (consultaSql, idBancoDados) => {
         }
         bancoInfo = rows[0];
 
-        // 2. Validação de Segurança (Bloqueio de DML/DDL) - RF05
+        // 2. Validação de Segurança (Bloqueio de DML/DDL)
         const sqlLimpo = consultaSql.trim().toUpperCase();
         if (/(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)/.test(sqlLimpo)) {
             return { error: "Consulta inválida. Apenas consultas SELECT são permitidas no teste." };

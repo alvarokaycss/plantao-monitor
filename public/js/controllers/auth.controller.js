@@ -2,7 +2,6 @@
 
 import { login, register, logout } from '../services/auth.service.js';
 import { ui } from '../views/base.view.js';
-import { showMessage } from '../utils/utils.js';
 
 let isRegisterMode = false;
 
@@ -48,10 +47,10 @@ function toggleAuthMode() {
 }
 
 async function handleEmailLogin() {
-    if(ui.btnSubmit) ui.btnSubmit.disabled = true;
     
     try {
         await login(ui.loginEmail.value.trim(), ui.loginPass.value);
+        if(ui.btnSubmit) ui.btnSubmit.textContent = "Entrando...";
         // O listener de estado no main.js fará o redirecionamento
     } catch (error) {
         if(ui.btnSubmit) ui.btnSubmit.disabled = false;
@@ -84,5 +83,6 @@ async function handleEmailRegister() {
 }
 
 function handleLogout() {
+    if (ui.btnSubmit) ui.btnSubmit.textContent = "Entrar"
     logout();
 }

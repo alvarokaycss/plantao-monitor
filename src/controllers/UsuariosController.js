@@ -2,6 +2,76 @@
 
 const UsuariosService = require("../models/UsuariosService");
 const { asInteger } = require("../utils/helpers");
+const admin = require("firebase-admin");
+const { pool, SCHEMA } = require("../db/db");
+
+/**
+ * POST /auth/register
+ * Rota pública (protegida apenas por validação de token Firebase).
+ * Cria o usuário no Postgres com status PENDENTE (ativo=false).
+ */
+exports.registerUser = async (req, res) => {
+    const { idToken } = req.body; // O front envia o token recém-criado
+
+    if (!idToken) {
+        return res.status(400).json({ error: "Token de identificação é obrigatório." });
+    }
+
+    let decodedToken;
+    try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (error) {
+        return res.status(401).json({ error: "Token inválido ou expirado." });
+    }
+
+    const { uid, email, name } = decodedToken;
+    const nomeUsuario = name || email.split('@')[0];
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Inserir Usuário (Padrão: ATIVO = FALSE)
+        const insertUserQuery = `
+            INSERT INTO ${SCHEMA}.usuario (uid_firebase, id_perfil, email, nome, ativo)
+            VALUES ($1, 3, $2, $3, FALSE) -- 3 = Viewer, Ativo = FALSE
+            ON CONFLICT (uid_firebase) DO UPDATE SET email = EXCLUDED.email -- Apenas atualiza email se já existir
+            RETURNING id_usuario, ativo;
+        `;
+        const userRes = await client.query(insertUserQuery, [uid, email, nomeUsuario]);
+        const newUser = userRes.rows[0];
+
+        // 2. Configuração Inicial de Email (Movido do Middleware para cá)
+        // Isso atende sua solicitação de remover a automação do middleware
+        const canalEmailQuery = `SELECT id_tipo_canal FROM ${SCHEMA}.tipos_canal_notificacao WHERE nome ILIKE 'Email'`;
+        const canalRes = await client.query(canalEmailQuery);
+
+        if (canalRes.rows.length > 0) {
+            const idTipoEmail = canalRes.rows[0].id_tipo_canal;
+            const configQuery = `
+                INSERT INTO ${SCHEMA}.configuracoes_notificacao 
+                (id_usuario, id_tipo_canal, endereco_notificacao, habilitado)
+                VALUES ($1, $2, $3, FALSE) -- Habilitado FALSE por padrão até aprovação
+                ON CONFLICT (endereco_notificacao) DO NOTHING;
+            `;
+            await client.query(configQuery, [newUser.id_usuario, idTipoEmail, email]);
+        }
+
+        await client.query('COMMIT');
+
+        res.status(201).json({ 
+            message: "Cadastro realizado. Aguarde aprovação do administrador.",
+            user: newUser
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error("Erro no registro:", error);
+        res.status(500).json({ error: "Erro ao registrar usuário." });
+    } finally {
+        client.release();
+    }
+};
 
 /**
  * GET /usuarios

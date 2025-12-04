@@ -113,10 +113,16 @@ button:disabled {
     padding: 12px 24px;
     background-color: var(--cor-navbar);
     border-bottom: 2px solid var(--cor-linha);
-    height: 100px; /* Sua Mudança */
-    position: sticky;
+    height: 100px;
+    
+    /* MUDANÇA: Fixa a barra no topo da janela */
+    position: fixed; 
     top: 0;
-    z-index: 10;
+    left: 0;
+    width: 100%; /* Garante que ocupe a largura total */
+    
+    z-index: 100; /* Aumentei o z-index para garantir que fique acima de tudo */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Opcional: Sombra leve para destacar */
 }
 
 .nav-brand {
@@ -184,10 +190,14 @@ button:disabled {
 
 .content-wrapper {
     max-width: var(--largura-maxima);
-    margin: 24px auto; /* Espaçamento do topo */
+    
+    /* MUDANÇA: Margem superior maior para compensar a navbar fixa */
+    /* 100px (altura navbar) + 24px (espaço extra) = 124px */
+    margin: 124px auto 24px auto; 
+    
     padding: 0 24px;
     display: grid;
-    gap: 20px; /* Espaçamento entre os containers */
+    gap: 20px;
 }
 
 /* ============================================== */
@@ -563,6 +573,7 @@ button:disabled {
     width: 100%;
     border-collapse: collapse;
     background-color: white;
+    min-width: 800px;
 }
 
 .custom-table thead {
@@ -732,9 +743,22 @@ button:disabled {
 /* --- Tabela e Botão Flutuante --- */
 .table-container {
     padding: 0;
-    overflow: hidden;
     margin-top: 20px;
     position: relative;
+    
+    /* ALTERAÇÃO AQUI: */
+    /* Removemos 'overflow: hidden' e usamos 'auto' para o eixo X */
+    overflow-x: auto; 
+    
+    /* Garante rolagem suave em celulares */
+    -webkit-overflow-scrolling: touch; 
+    
+    /* Garante que o container respeite a largura da tela e não estoure */
+    max-width: 100%;
+    
+    /* Opcional: Borda para indicar onde a tabela termina */
+    border: 1px solid var(--cor-linha);
+    border-radius: var(--raio-borda);
 }
 
 /* Botão (+) Flutuante no Header da Tabela */
@@ -1068,9 +1092,9 @@ button:disabled {
     justify-content: center;
 }
 
-/* ============================================== */
-/* 13. Estilos do Formulário de Login (Refatorado) */
-/* ============================================== */
+/* =====================================*/
+/* 13. Estilos do Formulário de Login  */
+/* ==================================== */
 
 .login-form {
     width: 100%;
@@ -1180,7 +1204,7 @@ button:disabled {
     padding-top: 15px;
 }
 
-/* TIMELINE (CORES CORRIGIDAS) */
+/* TIMELINE */
 .timeline-container {
     display: flex;
     flex-direction: column;
@@ -1244,4 +1268,56 @@ button:disabled {
 @media (max-width: 800px) {
     .detalhe-body { grid-template-columns: 1fr; }
     .detalhe-col-historico { border-right: none; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
+}
+
+/* ============================================== */
+/* Responsividade da Navbar (Mobile/Tablet)       */
+/* ============================================== */
+
+@media (max-width: 768px) {
+    
+    /* 1. Reduz a altura da barra de navegação */
+    .navbar {
+        height: 60px; /* Reduzido de 100px */
+        padding: 8px 12px;
+    }
+
+    /* 2. Reduz o tamanho do logo principal (QQ Monitor) */
+    .logo {
+        height: 40px; /* Reduzido de 80px */
+    }
+
+    /* 3. ESCONDE O SEGUNDO LOGO (Lojas Quero-Quero) */
+    /* O seletor :last-child pega a última imagem dentro de .nav-brand */
+    .nav-brand .logo:last-child {
+        display: none;
+    }
+
+    /* 4. Ajustes nos Links de Navegação para caberem na tela */
+    .nav-links {
+        gap: 4px; /* Menor espaço entre links */
+    }
+    
+    .nav-link {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    /* 5. Ajuste do botão de perfil (Avatar) */
+    .profile-button {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+    }
+    
+    /* Ajuste do botão Sair */
+    .btn-logout {
+        padding: 4px 6px;
+        font-size: 11px;
+    }
+
+    .content-wrapper {
+        /* 60px (navbar) + 20px (espaço) = 80px */
+        margin-top: 80px; 
+    }
 }

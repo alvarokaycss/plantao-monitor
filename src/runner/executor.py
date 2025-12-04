@@ -7,6 +7,7 @@ import time
 import json
 import requests
 import smtplib
+import traceback
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -22,8 +23,9 @@ class DateEncoder(json.JSONEncoder):
             return obj.isoformat()
         return super().default(obj)
 
+
 def enviar_email_smtp(destinatario, assunto, corpo_html):
-    """Envia e-mail real via SMTP (Isolado)"""
+    """Envia e-mail real via SMTP"""
     server_host = os.getenv("SMTP_SERVER")
     port = os.getenv("SMTP_PORT")
     user = os.getenv("SMTP_USER")
@@ -50,8 +52,9 @@ def enviar_email_smtp(destinatario, assunto, corpo_html):
         print(f"    Erro SMTP: {e}")
         return False
 
+
 def notificar_webhook_dashboard(msg, tipo="INFO", id_incidente=None):
-    """Notifica o painel em tempo real (Isolado)"""
+    """Notifica o painel em tempo real """
     try:
         url = "http://localhost:8000/webhook/notify-update"
         payload = {
@@ -82,6 +85,7 @@ def reservar_job(conn):
     conn.commit()
     return row 
 
+
 def buscar_regra(conn, id_regra):
     cur = conn.cursor()
     cur.execute(f"""
@@ -89,6 +93,7 @@ def buscar_regra(conn, id_regra):
         FROM {DB_SCHEMA}.regra WHERE id_regra = %s
     """, (id_regra,))
     return cur.fetchone() 
+
 
 def executar_sql(conn, sql, nome_regra):
     start = time.time()
@@ -104,12 +109,13 @@ def executar_sql(conn, sql, nome_regra):
 
     try:
         cur.execute(sql)
+        # Verifica se é um SELECT (tem descrição de colunas)
         if cur.description:
             rows = cur.fetchall()
             resultado["linhas"] = len(rows)
             if resultado["linhas"] > 0:
-                cols = [d[0] for d in cur.description]
-                amostra = [dict(zip(cols, r)) for r in rows[:5]]
+                # Apenas pegamos as primeiras 5 linhas.
+                amostra = rows[:5]
                 resultado["amostra"] = json.dumps(amostra, cls=DateEncoder, ensure_ascii=False)
         else:
             resultado["linhas"] = cur.rowcount
@@ -126,6 +132,7 @@ def executar_sql(conn, sql, nome_regra):
     resultado["duracao_ms"] = int((time.time() - start) * 1000)
     return resultado
 
+
 def gerenciar_incidente(conn, id_regra, nome_regra, prioridade, resultado):
     """
     Retorna um dicionário com metadados do incidente ou None.
@@ -138,24 +145,27 @@ def gerenciar_incidente(conn, id_regra, nome_regra, prioridade, resultado):
 
     cur = conn.cursor()
     
-    # 4.1 Dedup
+    # 4.1 Verifica se já existe incidente em aberto ou reconhecido
     cur.execute(f"""
         SELECT id_incidente FROM {DB_SCHEMA}.incidente 
         WHERE id_regra = %s AND status IN ('ABERTO', 'RECONHECIDO')
     """, (id_regra,))
     existente = cur.fetchone()
 
+    # Se for existente retorna um dict, acessamos pela chave
     if existente:
-        print(f"   ! Incidente já existe (#{existente[0]}).")
-        # Retorna metadados, mas NÃO notifica ainda (espera o commit final)
-        return {"id": existente[0], "tipo": "EXISTENTE"}
+        id_existente = existente['id_incidente']
+        print(f"   ! Incidente já existe (#{id_existente}) | Regra: {nome_regra}.")
+        return {"id": id_existente, "tipo": "EXISTENTE"}
 
-    # 4.2 Criação
+    # 4.2 Cria um incidente 
     amostra_final = resultado["amostra"]
+    
+    # Se não tiver amostra retorna erro.
     if not amostra_final and resultado["erro"]:
         amostra_final = json.dumps({"erro_tecnico": resultado["erro"]})
 
-    print(f"   ! Criando novo incidente...")
+    print(f"   ! Criando novo incidente para a regra: {nome_regra}")
     cur.execute(f"""
         INSERT INTO {DB_SCHEMA}.incidente 
         (id_regra, status, prioridade_registro, data_abertura, dados_amostra)
@@ -163,10 +173,12 @@ def gerenciar_incidente(conn, id_regra, nome_regra, prioridade, resultado):
         RETURNING id_incidente
     """, (id_regra, prioridade, amostra_final))
     
-    novo_id = cur.fetchone()[0]
+    # Acessamos o ID pela chave do dicionário retornado
+    novo_id = cur.fetchone()['id_incidente']
     conn.commit()
 
     return {"id": novo_id, "tipo": "CRIADO"}
+
 
 def processar_notificacoes_email(conn, id_incidente, id_regra, nome_regra, prioridade):
     """Notifica APENAS via E-mail (O Webhook fica para o final)"""
@@ -188,10 +200,17 @@ def processar_notificacoes_email(conn, id_incidente, id_regra, nome_regra, prior
         print("   @ Nenhum plantonista ativo encontrado.")
         return
 
-    for (uid, cid, endereco, canal) in destinatarios:
+    # CORREÇÃO: Iteração correta sobre lista de dicionários
+    for row in destinatarios:
+        uid = row['id_usuario']
+        cid = row['id_tipo_canal']
+        endereco = row['endereco_notificacao']
+        canal = row['nome']
+
         status_envio = 'ERRO'
         msg_txt = f"A regra '{nome_regra}' falhou. Incidente #{id_incidente}."
         
+        # Só envia EMAIL
         if 'EMAIL' in canal.upper():
             print(f"    Enviando para {endereco}...")
             html = f"""
@@ -214,6 +233,7 @@ def processar_notificacoes_email(conn, id_incidente, id_regra, nome_regra, prior
         """, (id_incidente, uid, cid, status_envio, endereco, msg_txt))
     
     conn.commit()
+
 
 def finalizar_job(conn, id_fila, id_regra, resultado, id_incidente, tentativas_atuais, max_erros):
     cur = conn.cursor()
@@ -241,6 +261,7 @@ def finalizar_job(conn, id_fila, id_regra, resultado, id_incidente, tentativas_a
 
 # --- ORQUESTRADOR PRINCIPAL ---
 
+
 def processar_fila():
     conn = get_db_connection()
     if not conn: return False
@@ -252,7 +273,11 @@ def processar_fila():
             conn.close()
             return False
         
-        id_fila, id_regra, tentativas = job
+        # Acesso via chaves do dicionário
+        id_fila = job['id_fila']
+        id_regra = job['id_regra']
+        tentativas = job['tentativas']
+        
         tentativas = tentativas or 0
         
         print(f"🔨 [Executor] Job #{id_fila}: Regra {id_regra} (Tentativa {tentativas+1})")
@@ -266,7 +291,12 @@ def processar_fila():
             conn.close()
             return True
 
-        sql, nome, max_erros, prioridade = dados_regra
+        # Acesso via chaves do dicionário
+        sql = dados_regra['consulta_sql']
+        nome = dados_regra['nome']
+        max_erros = dados_regra['qnt_erro_max']
+        prioridade = dados_regra['prioridade']
+
         max_erros = max_erros or 1
         prioridade = prioridade or 3
 
@@ -274,20 +304,18 @@ def processar_fila():
         resultado = executar_sql(conn, sql, nome)
 
         # 4. Incidente
-        # info_incidente agora é um dict: {'id': 1, 'tipo': 'CRIADO'}
         info_incidente = gerenciar_incidente(conn, id_regra, nome, prioridade, resultado)
         
         id_incidente = info_incidente["id"] if info_incidente else None
 
-        # 5. Notificação Email (Assíncrono no mundo real, aqui síncrono antes do commit final para garantir envio)
+        # 5. Notificação Email
         if id_incidente:
              processar_notificacoes_email(conn, id_incidente, id_regra, nome, prioridade)
 
         # 6. Finalização (Commit dos Logs e Status da Fila)
         finalizar_job(conn, id_fila, id_regra, resultado, id_incidente, tentativas, max_erros)
 
-        # 7. Só notificamos o Dashboard AGORA, depois que o finalizar_job deu commit.
-        # Assim, quando o front vier buscar, os dados JÁ ESTARÃO lá.
+        # 7. Webhook Dashboard
         if info_incidente:
             tipo_evento = "INCIDENTE_CRIADO" if info_incidente["tipo"] == "CRIADO" else "INCIDENTE_ATUALIZADO"
             msg_webhook = f"Incidente #{id_incidente} atualizado na regra '{nome}'"
@@ -298,7 +326,8 @@ def processar_fila():
         return True
 
     except Exception as e:
-        print(f"❌ Erro Crítico (Main Loop): {e}")
+        print(f"!!! Erro Crítico (Main Loop): {e}")
+        traceback.print_exc()
         if conn: conn.rollback(); conn.close()
         return False
 

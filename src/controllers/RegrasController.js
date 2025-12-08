@@ -52,45 +52,87 @@ exports.getRegraDetalhes = async (req, res) => {
  * Cria uma nova regra.
  */
 exports.createRegra = async (req, res) => {
-    const payload = req.body || {};
-    const id_usuario_criador = req.user.id_usuario;
-
-    // 1. Validação
-    const { id_banco_dados, nome, consulta_sql, intervalo_minutos, qnt_erro_max, prioridade, roles } = payload;
-
-    if (!id_banco_dados || !nome || !consulta_sql || !intervalo_minutos || !id_usuario_criador) {
-        return res.status(400).json({ error: "Campos obrigatórios: id_banco_dados, nome, consulta_sql, intervalo_minutos" });
-    }
-    
-    if (!Array.isArray(roles) || roles.length === 0) {
-        return res.status(400).json({ error: "O campo 'roles' é obrigatório e deve ser um array de IDs." });
-    }
-
-    // 2. Normalização
-    const idBancoVal = asInteger(id_banco_dados);
-    const intervaloVal = asInteger(intervalo_minutos);
-    const prioridadeVal = asInteger(prioridade) || 3; 
-    const qntErroMaxVal = Number(qnt_erro_max) >= 0 ? Number(qnt_erro_max) : 1;
-    const rolesVal = roles.map(asInteger).filter(id => id !== null);
-
-    if (!idBancoVal || !intervaloVal || rolesVal.length === 0) {
-        return res.status(400).json({ error: "IDs (banco/intervalo/roles) devem ser números inteiros positivos." });
-    }
-    
-    // 3. Chamada ao Service
     try {
-        const result = await RegrasService.createRegra({ 
-            ...payload, 
-            idBancoVal, intervaloVal, qntErroMaxVal, prioridadeVal, rolesVal 
-        }, id_usuario_criador);
+        const payload = req.body || {};
+        // Garante que o usuário está autenticado (assumindo middleware auth)
+        const id_usuario_criador = req.user ? req.user.id_usuario : null;
+
+        if (!id_usuario_criador) {
+            return res.status(401).json({ error: "Usuário não autenticado." });
+        }
+
+        // 1. Extração de Campos (Desestruturação)
+        // Adicionei campos opcionais (descricao, janelas) que vimos antes
+        const { 
+            id_banco_dados, nome, consulta_sql, intervalo_minutos, 
+            qnt_erro_max, prioridade, roles, descricao, janela_inicio, janela_fim 
+        } = payload;
+
+        // 2. Validação de Campos Obrigatórios (antes de manipular strings)
+        if (!id_banco_dados || !nome || !consulta_sql || !intervalo_minutos) {
+            return res.status(400).json({ error: "Campos obrigatórios: id_banco_dados, nome, consulta_sql, intervalo_minutos" });
+        }
+
+        // 3. Validação de Segurança (DML/DDL)
+        const sqlLimpo = String(consulta_sql).trim().toUpperCase();
+        if (/(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)/.test(sqlLimpo)) {
+            // Retorna 400 Bad Request em vez de explodir um erro
+            return res.status(400).json({ error: "Segurança: Comandos DML/DDL não são permitidos nesta regra." });
+        }
+
+        if (!Array.isArray(roles) || roles.length === 0) {
+            return res.status(400).json({ error: "O campo 'roles' é obrigatório e deve ser um array de IDs." });
+        }
+
+        // 4. Normalização (Sanitização)
+        const idBancoVal = parseInt(id_banco_dados, 10);
+        const intervaloVal = parseInt(intervalo_minutos, 10);
+        const prioridadeVal = parseInt(prioridade, 10) || 3; 
+        const qntErroMaxVal = Number(qnt_erro_max) >= 0 ? Number(qnt_erro_max) : 1;
+        
+        // Filtra roles para garantir que sejam números válidos
+        const rolesVal = roles.map(r => parseInt(r, 10)).filter(id => !isNaN(id) && id > 0);
+
+        if (!idBancoVal || !intervaloVal || rolesVal.length === 0) {
+            return res.status(400).json({ error: "IDs (banco/intervalo/roles) devem ser números inteiros válidos." });
+        }
+
+        // 5. Montagem do Objeto Seguro 
+            const dadosRegra = {
+            // LADO ESQUERDO (O que o Service espera) : LADO DIREITO (Variável do Controller)
+            idBancoVal: idBancoVal,          
+            nome: nome.trim(),
+            consulta_sql: consulta_sql,
+            intervaloVal: intervaloVal,      
+            qntErroMaxVal: qntErroMaxVal,    
+            prioridadeVal: prioridadeVal,    
+            rolesVal: rolesVal,              
+            
+            // Opcionais
+            descricao: descricao || null,
+            janela_inicio: janela_inicio || '00:00',
+            janela_fim: janela_fim || '23:59',
+            
+            // Campos de Adiar/Silenciar (passando null se não vierem no body)
+            data_adiar_inicio: payload.data_adiar_inicio || null,
+            data_adiar_fim: payload.data_adiar_fim || null,
+            data_silenciar_inicio: payload.data_silenciar_inicio || null,
+            data_silenciar_fim: payload.data_silenciar_fim || null
+        };
+
+        // 6. Chamada ao Service
+        const result = await RegrasService.createRegra(dadosRegra, id_usuario_criador);
 
         return res.status(201).json(result);
+
     } catch (err) {
+        // Tratamento de Erro de Chave Estrangeira (Postgres)
         if (err && err.code === "23503") {
-            return res.status(409).json({ error: "Falha ao criar regra: id_banco_dados, id_usuario_criador ou um dos IDs em 'roles' não foi encontrado." });
+            return res.status(409).json({ error: "Falha ao criar regra: Banco de dados ou Role informada não existe." });
         }
+        
         console.error("Erro ao inserir regra:", err);
-        return res.status(500).json({ error: "Erro interno ao cadastrar regra" });
+        return res.status(500).json({ error: "Erro interno ao cadastrar regra." });
     }
 };
 

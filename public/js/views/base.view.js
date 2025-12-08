@@ -104,7 +104,6 @@ export const ui = {
         tbody: document.getElementById('usuarios-list-body'),
         filterPerfil: document.getElementById('usuarios-filter-perfil'),
         search: document.getElementById('usuarios-search'),
-        addBtn: document.getElementById('btn-add-usuario'),
         
         // Modal Config
         modal: document.getElementById('modal-usuario-config'),

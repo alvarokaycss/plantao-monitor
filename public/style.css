@@ -1,13 +1,13 @@
-/* ============================================== */
-/* 1. Variáveis Globais (:root)                   */
-/* ============================================== */
+
+/* 1. Variáveis Globais (:root) */
+
 :root {
     /* Cores de Estrutura */
     --cor-fundo: #EBF6F2;
     --cor-navbar: #FAFAFA;
     --cor-principal-div: #FAFAFA; /* Fundo de "card" (Filtros, Headers) */
     --cor-interna-div: #FFFFFF; /* Fundo do item de incidente */
-    --cor-linha: #C2D4CE; /* Bordas (contrasta com --cor-principal-div) */
+    --cor-linha: #C2D4CE; /* Bordas  */
     
     /* Cores de Texto */
     --cor-texto-principal: #2C5132;
@@ -32,9 +32,9 @@
     
     /* Cores de Botões */
     --cor-botao-exportar: #214CA9;
-    --cor-botao-close: #2C5132;      /* Botão Fechar (verde escuro) */
-    --cor-botao-ack: #F3C810;       /* Botão ACK (amarelo) */
-    --cor-botao-padrao: #2C5132;    /* Botão Filtrar (verde kpi) */
+    --cor-botao-close: #2C5132;      /* Botão Fechar */
+    --cor-botao-ack: #F3C810;       /* Botão ACK */
+    --cor-botao-padrao: #2C5132;    /* Botão Filtrar */
     --cor-botao-desabilitado: #ACACAC;
     
     /* Layout */
@@ -131,7 +131,7 @@ button:disabled {
     gap: 16px;
 }
 .logo {
-    height: 80px;
+    height: 70px;
     width: auto;
     object-fit: contain;
 }

@@ -25,7 +25,7 @@ const VIEW_PERMISSIONS = {
     'usuarios': 'TELA_USUARIOS'
 };
 
-// Armazena os recursos do usuário logado (ex: ['TELA_REGRAS', ...])
+// Armazena os recursos do usuário logado
 let currentUserResources = [];
 
 // --- Navegação (SPA) com Bloqueio ---
@@ -77,13 +77,19 @@ function updateNavbarVisibility() {
 }
 
 // --- WebSocket Setup ---
+
+let globalSocket = null;
+
 function setupWebSocket() {
     if (typeof io === 'undefined') return;
     
-    const socket = io(BASE_URL);
-    socket.on("connect", () => console.log("WebSocket conectado:", socket.id));
+    // Evitar duplicação de mensagens
+    if (globalSocket) return;
+
+    globalSocket = io(BASE_URL);
+    globalSocket.on("connect", () => console.log("WebSocket conectado:", globalSocket.id));
     
-    socket.on("dashboard_update", async (data) => {
+    globalSocket.on("dashboard_update", async (data) => {
         console.log("Update recebido:", data);
         showMessage(`${data.mensagem}`, 'info');
 
@@ -128,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             try {
                 // Tenta buscar detalhes do usuário E suas permissões (recursos)
-                // Esta rota DEVE ser acessível a todos (R_NENHUM)
+                // Esta rota é acessível a todos (R_NENHUM)
                 const userDetails = await fetchApi('/usuarios/eu/detalhes');
                 
                 // Processa a lista de recursos

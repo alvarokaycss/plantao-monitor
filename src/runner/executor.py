@@ -145,7 +145,7 @@ def gerenciar_incidente(conn, id_regra, nome_regra, prioridade, resultado):
 
     cur = conn.cursor()
     
-    # 4.1 Verifica se já existe incidente em aberto ou reconhecido
+    # Verifica se já existe incidente em aberto ou reconhecido
     cur.execute(f"""
         SELECT id_incidente FROM {DB_SCHEMA}.incidente 
         WHERE id_regra = %s AND status IN ('ABERTO', 'RECONHECIDO')
@@ -158,7 +158,7 @@ def gerenciar_incidente(conn, id_regra, nome_regra, prioridade, resultado):
         print(f"   ! Incidente já existe (#{id_existente}) | Regra: {nome_regra}.")
         return {"id": id_existente, "tipo": "EXISTENTE"}
 
-    # 4.2 Cria um incidente 
+    # Cria um incidente 
     amostra_final = resultado["amostra"]
     
     # Se não tiver amostra retorna erro.
@@ -200,7 +200,7 @@ def processar_notificacoes_email(conn, id_incidente, id_regra, nome_regra, prior
         print("   @ Nenhum plantonista ativo encontrado.")
         return
 
-    # CORREÇÃO: Iteração correta sobre lista de dicionários
+    # Iteração sobre lista de dicionários
     for row in destinatarios:
         uid = row['id_usuario']
         cid = row['id_tipo_canal']
@@ -261,7 +261,6 @@ def finalizar_job(conn, id_fila, id_regra, resultado, id_incidente, tentativas_a
 
 # --- ORQUESTRADOR PRINCIPAL ---
 
-
 def processar_fila():
     conn = get_db_connection()
     if not conn: return False
@@ -273,7 +272,7 @@ def processar_fila():
             conn.close()
             return False
         
-        # Acesso via chaves do dicionário
+        # Acesso via chaves do dicionário / Retorno do reservar_job
         id_fila = job['id_fila']
         id_regra = job['id_regra']
         tentativas = job['tentativas']
@@ -308,7 +307,7 @@ def processar_fila():
         
         id_incidente = info_incidente["id"] if info_incidente else None
 
-        # 5. Notificação Email
+        # 5. Notificação Email (Toda vez que tem um incidente envia um email)
         if id_incidente:
              processar_notificacoes_email(conn, id_incidente, id_regra, nome, prioridade)
 

@@ -190,7 +190,7 @@ async function performAck(id, btnElement) {
     
     try {
         await fetchApi(`/incidentes/${id}/ack`, { method: 'POST' });
-        showMessage('Incidente Reconhecido (ACK).', 'success');
+        // showMessage('Incidente Reconhecido (ACK).', 'success'); // 
         
         // Atualiza UI
         loadIncidentesView(true); // Atualiza lista

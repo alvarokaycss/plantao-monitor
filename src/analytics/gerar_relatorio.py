@@ -63,17 +63,13 @@ def gerar_graficos():
         print(f"Erro ao ler dados: {e}")
         return
 
-    # --------------
     # PROCESSAMENTO
-    # --------------
 
     status_counts = df['status_execucao'].value_counts()
     df_sucesso = df[df['status_execucao'] == 'SUCESSO']
     perf_por_regra = df_sucesso.groupby('nome_regra')['duracao_ms'].mean().sort_values()
 
-    # ---------
     # GRÁFICOS
-    # ---------
 
     plt.style.use('ggplot')
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))

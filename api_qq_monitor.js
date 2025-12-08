@@ -5,8 +5,8 @@ const express = require("express");
 const cors = require("cors");
 const process = require("process");
 const path = require("path");
-const http = require("http"); // Módulo nativo HTTP
-const { Server } = require("socket.io"); // Classe do Socket.io
+const http = require("http");
+const { Server } = require("socket.io");
 const admin = require("firebase-admin");
 const serviceAccount = require("./firebase-service-account-key.json");
 
@@ -25,7 +25,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", // Em produção, restrinja isso para o domínio do front
+        origin: "*", // Apenas para desenvolimento, aqui ficaria o domínio do site
         methods: ["GET", "POST"]
     }
 });
@@ -42,7 +42,6 @@ app.use((req, res, next) => {
 });
 
 // 3. Rota Interna para o Python chamar
-// 3. Rota Interna (Webhook) Atualizada
 app.post("/webhook/notify-update", (req, res) => {
     // Agora desestruturamos tudo
     const { mensagem, tipo, id_incidente } = req.body;
@@ -59,6 +58,8 @@ app.post("/webhook/notify-update", (req, res) => {
     
     res.json({ status: "broadcast_sent" });
 });
+// Por enquanto a rota está pública o ideal seria criar um token de validação
+// no .env, e deixar acessível somente para os serviços internos.
 
 // Rotas da Aplicação
 app.use("/", auxiliarRoutes);
@@ -95,3 +96,5 @@ const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
     console.log(`🚀 API + WebSocket rodando em http://localhost:${PORT}`);
 });
+
+// Refatorar para websocketService.js (Seguindo padrão MVC)

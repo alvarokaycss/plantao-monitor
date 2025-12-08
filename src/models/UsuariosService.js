@@ -86,7 +86,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
         `;
         const configRes = await client.query(configQuery, [idUsuarioVal]);
 
-        // NOVO: Query 3: Buscar os recursos associados (toggles de tela)
+        // Query 3: Buscar os recursos associados (toggles de tela)
         const recursosQuery = `
             SELECT 
                 ur.id_recurso,

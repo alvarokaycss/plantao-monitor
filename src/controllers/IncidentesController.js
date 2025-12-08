@@ -47,7 +47,7 @@ exports.getIncidenteDetalhes = async (req, res) => {
 /**
  * POST /incidentes/:id/ack
  * Reconhece um incidente (muda status para RECONHECIDO).
- * AGORA COM WEBSOCKET REAL-TIME
+ * COM WEBSOCKET REAL-TIME
  */
 exports.ackIncident = async (req, res) => {
     const idIncidenteVal = asInteger(req.params.id);

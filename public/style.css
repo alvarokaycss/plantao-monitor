@@ -5,15 +5,15 @@
     /* Cores de Estrutura */
     --cor-fundo: #EBF6F2;
     --cor-navbar: #FAFAFA;
-    --cor-principal-div: #FAFAFA; /* Fundo de "card" (Filtros, Headers) */
-    --cor-interna-div: #FFFFFF; /* Fundo do item de incidente */
-    --cor-linha: #C2D4CE; /* Bordas  */
+    --cor-principal-div: #FAFAFA; 
+    --cor-interna-div: #FFFFFF;
+    --cor-linha: #C2D4CE;
     
     /* Cores de Texto */
     --cor-texto-principal: #2C5132;
     --cor-letra-clara: #FFFFFF;
-    --cor-texto-secundario: #6F8873; /* Para labels, placeholders */
-    --cor-texto-botao-ack: #FAFAFA; /* Texto escuro para botão amarelo */
+    --cor-texto-secundario: #6F8873;
+    --cor-texto-botao-ack: #FAFAFA;
 
     /* Cores de Ação e Status */
     --cor-kpi-box: #FAFAFA;
@@ -32,9 +32,9 @@
     
     /* Cores de Botões */
     --cor-botao-exportar: #214CA9;
-    --cor-botao-close: #2C5132;      /* Botão Fechar */
-    --cor-botao-ack: #F3C810;       /* Botão ACK */
-    --cor-botao-padrao: #2C5132;    /* Botão Filtrar */
+    --cor-botao-close: #2C5132;
+    --cor-botao-ack: #F3C810;
+    --cor-botao-padrao: #2C5132;
     --cor-botao-desabilitado: #ACACAC;
     
     /* Layout */
@@ -45,9 +45,9 @@
     font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-/* ============================================== */
-/* 2. Reset Básico e Estilos Globais              */
-/* ============================================== */
+
+/* 2. Reset Básico e Estilos Globais  */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -73,7 +73,7 @@ textarea {
     width: 100%;
     padding: 8px;
     margin-top: 4px;
-    background-color: var(--cor-interna-div); /* Garante fundo branco */
+    background-color: var(--cor-interna-div);
     resize: vertical; /* Permite redimensionar verticalmente */
 }
 
@@ -103,9 +103,9 @@ button:disabled {
     padding: 16px;
 }
 
-/* ============================================== */
-/* 3. Estrutura (Navbar e Content)                */
-/* ============================================== */
+
+/* 3. Estrutura (Navbar e Content) */
+
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -115,14 +115,14 @@ button:disabled {
     border-bottom: 2px solid var(--cor-linha);
     height: 100px;
     
-    /* MUDANÇA: Fixa a barra no topo da janela */
+    /*  Fixa a barra no topo da janela */
     position: fixed; 
     top: 0;
     left: 0;
-    width: 100%; /* Garante que ocupe a largura total */
+    width: 100%;
     
-    z-index: 100; /* Aumentei o z-index para garantir que fique acima de tudo */
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Opcional: Sombra leve para destacar */
+    z-index: 100; /*  z-index para garantir que fique acima de tudo */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 .nav-brand {
@@ -153,7 +153,7 @@ button:disabled {
     background-color: var(--cor-fundo);
 }
 
-/* REQUISITO 1: Cor do link ativo */
+
 .nav-link.active {
     background-color: var(--cor-texto-principal);
     color: var(--cor-letra-clara);
@@ -190,19 +190,13 @@ button:disabled {
 
 .content-wrapper {
     max-width: var(--largura-maxima);
-    
-    /* MUDANÇA: Margem superior maior para compensar a navbar fixa */
-    /* 100px (altura navbar) + 24px (espaço extra) = 124px */
     margin: 124px auto 24px auto; 
-    
     padding: 0 24px;
     display: grid;
     gap: 20px;
 }
 
-/* ============================================== */
 /* 4. Estilos da View: Incidentes (Refinada)      */
-/* ============================================== */
 
 /* 1. KPIs */
 .kpi-container {
@@ -231,7 +225,7 @@ button:disabled {
     font-weight: bold;
 }
 
-/* Estilos Específicos do KPI Plantonista (REQ 6) */
+/* Estilos Específicos do KPI Plantonista */
 #kpi-plantonista-card {
     background-color: var(--cor-plantonista-fundo);
     border-color: var(--cor-plantonista-borda-fonte);
@@ -239,7 +233,7 @@ button:disabled {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px; /* Espaço entre os textos */
+    gap: 2px;
 }
 .kpi-value-plantonista {
     font-size: 20px;
@@ -252,7 +246,7 @@ button:disabled {
     color: var(--cor-plantonista-borda-fonte);
 }
 .kpi-tag-plantonista {
-    background-color: var(--cor-interna-div); /* Fundo branco */
+    background-color: var(--cor-interna-div);
     border: 1px solid var(--cor-plantonista-borda-fonte);
     color: var(--cor-plantonista-borda-fonte);
     padding: 2px 50px;
@@ -263,11 +257,10 @@ button:disabled {
     align-self: center;
 }
 
-
 /* 2. Filtros */
 .filter-container {
     display: flex;
-    flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+    flex-wrap: wrap;
     gap: 16px;
     align-items: flex-end;
     margin: 20px 0px;
@@ -300,7 +293,7 @@ button:disabled {
 /* 3. Painel de Incidentes (Container do cabeçalho e lista) */
 .panel-header {
     display: grid; 
-    gap: 16px; /* Espaço entre o título e a lista de incidentes */
+    gap: 16px;
 }
 
 .panel-header-title { 
@@ -328,33 +321,30 @@ button:disabled {
 /* 4. Incident List Container */
 #incident-list-container {
     display: grid;
-    gap: 16px; /* Espaço entre os cards de incidente */
+    gap: 16px;
 }
 .loading-placeholder {
     padding: 20px;
     text-align: center;
     color: var(--cor-texto-secundario);
     background-color: var(--cor-interna-div);
-    border: 1px solid var(--cor-linha); /* Adicionado para consistência */
+    border: 1px solid var(--cor-linha);
     border-radius: var(--raio-borda);
 }
 
-/* ============================================== */
-/* 5. Estilo do Card de Incidente                 */
-/* ============================================== */
+/* 5. Estilo do Card de Incidente */
+
 .incident-item {
     background-color: var(--cor-interna-div);
-    border: 1px solid var(--cor-linha); /* Borda padrão */
+    border: 1px solid var(--cor-linha);
     padding: 12px 16px;
-    overflow: hidden; /* Para o status-bar */
+    overflow: hidden;
     display: grid;
     /* Layout de 3 colunas */
     grid-template-columns: 1fr auto auto;
-    align-items: center; /* Alinha verticalmente */
+    align-items: center; 
     gap: 16px;
-    
-    /* Borda de Status (Barra lateral) */
-    border-left: 6px solid var(--cor-status-aberto); /* Default */
+    border-left: 6px solid var(--cor-status-aberto); /* Cor padrão */
 }
 
 /* Cor da borda esquerda (Barra de Status) */
@@ -378,7 +368,7 @@ button:disabled {
 .incident-meta-tags {
     display: flex;
     gap: 8px;
-    margin-top: 4px; /* Espaçamento do título */
+    margin-top: 4px;
 }
 
 /* Estilo do Span de Prioridade */
@@ -387,7 +377,7 @@ button:disabled {
     font-weight: 600;
     padding: 2px 8px;
     border-radius: var(--raio-borda);
-    border: 1px solid; /* Borda da cor da fonte */
+    border: 1px solid; 
 }
 .incident-priority[data-priority="1"] {
     background-color: var(--cor-prio-alta-fundo);
@@ -414,21 +404,21 @@ button:disabled {
 
 /* Coluna 2: Comentário */
 .incident-comment-middle .comment-input {
-    margin-top: 0; /* Remove o margin-top padrão do textarea */
-    min-width: 250px; /* Largura mínima */
+    margin-top: 0;
+    min-width: 250px;
 }
 
 /* Coluna 3: Botões */
 .incident-actions-right {
     display: grid;
-    gap: 8px; /* Espaço entre os botões */
+    gap: 8px;
     align-content: center;
 }
 
 .btn-action {
     font-size: 13px;
     font-weight: 600;
-    width: 150px; /* Sua Mudança (Largura fixa) */
+    width: 150px;
     text-align: center;
 }
 .btn-ack {
@@ -440,40 +430,37 @@ button:disabled {
     color: var(--cor-letra-clara);
 }
 
-/* Responsividade (Minha versão, ajustada para sua estrutura) */
+/* Responsividade (Incidentes)*/
 @media (max-width: 768px) {
     .incident-item {
         /* Empilha as 3 colunas em telas pequenas */
         grid-template-columns: 1fr;
     }
     .incident-actions-right {
-        /* Botões ficam lado a lado em telas pequenas */
         display: flex;
         flex-direction: row;
     }
     .btn-action {
-        flex: 1; /* Ocupam espaço igual */
-        width: auto; /* Remove a largura fixa */
+        flex: 1;
+        width: auto;
     }
     .incident-comment-middle .comment-input {
-        min-width: 100%; /* Ocupa largura total */
+        min-width: 100%;
     }
 }
 
+/* 6. Mensagens */
 
-/* ============================================== */
-/* 6. Mensagens                                   */
-/* ============================================== */
 .message-area {
     position: sticky;
-    top: 100px; /*  Ajustado para sua navbar de 100px */
-    z-index: 9; /* Fica abaixo da navbar (10), mas acima do resto */
+    top: 100px; 
+    z-index: 9; /* Fica abaixo da navbar (10) */
 
     display: flex;
     flex-direction: column;
     gap: 10px;
-    width: 100%; /* Ocupa o espaço no grid */
-    
+    width: 100%;
+
     max-height: 200px;
     overflow-y: auto;
 }
@@ -482,7 +469,7 @@ button:disabled {
     border-radius: var(--raio-borda);
     font-weight: 500;
     border: 1px solid;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Sombra sutil para pop-ups */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     transition: opacity 0.5s;
 }
 .msg.success {
@@ -502,9 +489,8 @@ button:disabled {
     color: #0f5132;
 }
 
-/* ============================================== */
-/* 7. Estilos da Tela de Login (RF01)      */
-/* ============================================== */
+/* 7. Estilos da Tela de Login */
+
 .login-container {
     display: flex;
     align-items: center;
@@ -564,9 +550,7 @@ button:disabled {
     margin-left: 8px;
 }
 
-/* ============================================== */
-/* 8. Estilos da Tabela de Regras e Modal         */
-/* ============================================== */
+/* 8. Estilos da Tabela de Regras e Modal */
 
 /* Tabela Customizada */
 .custom-table {
@@ -595,11 +579,12 @@ button:disabled {
     vertical-align: middle;
 }
 
+/* Hover tabela */
 .custom-table tbody tr:hover {
     background-color: #f9f9f9;
 }
 
-/* Badges (Pílulas) */
+/* Badges */
 .badge {
     display: inline-block;
     padding: 4px 12px;
@@ -611,7 +596,7 @@ button:disabled {
     border: 1px solid transparent;
 }
 
-/* Cores de Prioridade (Fundo Pastel + Borda/Texto Forte) */
+/* Cores de Prioridade (Fundo Pastel */
 .badge-prio-1 { background: #F7CDCD; color: #761818; border-color: #761818; } /* Alta */
 .badge-prio-2 { background: #F9F9DB; color: #9C7F00; border-color: #F3C810; } /* Média */
 .badge-prio-3 { background: #CDF7D4; color: #2C5132; border-color: #8CB395; } /* Baixa */
@@ -627,7 +612,6 @@ button:disabled {
     border: none;
     cursor: pointer;
     padding: 4px;
-    margin-left: 4px;
     font-size: 16px;
 }
 .action-btn:hover { transform: scale(1.1); }
@@ -673,10 +657,9 @@ button:disabled {
     position: sticky; /* Sticky em vez de fixed para evitar que saia do modal */
     bottom: 0;
     z-index: 10;
-    /* Garante que o footer tenha um fundo que cubra o conteúdo */
     background-color: white; 
     border-top: 1px solid var(--cor-linha);
-    padding: 12px 24px; /* Adiciona padding vertical e horizontal */
+    padding: 12px 24px;
     
     display: flex;
     justify-content: flex-end;
@@ -684,13 +667,13 @@ button:disabled {
 }
 
 .btn-confirm {
-    background-color: #761818; /* Vermelho/Bordo do print */
+    background-color: #761818;
     color: white;
     padding: 10px 24px;
     border-radius: 6px;
 }
 .btn-cancel {
-    background-color: #2C5132; /* Verde escuro do print */
+    background-color: #2C5132;
     color: white;
     padding: 10px 24px;
     border-radius: 6px;
@@ -698,16 +681,14 @@ button:disabled {
 
 /* Ajuste para ícones SVG dentro dos botões */
 .action-btn img {
-    width: 16px; /* Ajuste o tamanho conforme desejar */
+    width: 16px;
     height: 16px;
-    vertical-align: middle; /* Alinha o ícone no meio do texto se houver */
+    vertical-align: middle;
 }
 
-/* ============================================== */
 /* 9. Ajustes de Refatoração (HTML Limpo)         */
-/* ============================================== */
 
-/* --- Barra de Filtros --- */
+/* Barra de Filtros */
 .filter-row {
     display: flex;
     justify-content: space-between;
@@ -733,10 +714,10 @@ button:disabled {
     position: absolute;
     right: 10px;
     top: 50%;
-    transform: translateY(-50%); /* Centraliza verticalmente exato */
+    transform: translateY(-50%);
     width: 16px;
     height: 16px;
-    opacity: 0.5; /* Deixa cinza suave */
+    opacity: 0.5;
     pointer-events: none; /* O clique passa através do ícone */
 }
 
@@ -746,17 +727,12 @@ button:disabled {
     margin-top: 20px;
     position: relative;
     
-    /* ALTERAÇÃO AQUI: */
-    /* Removemos 'overflow: hidden' e usamos 'auto' para o eixo X */
     overflow-x: auto; 
-    
     /* Garante rolagem suave em celulares */
     -webkit-overflow-scrolling: touch; 
-    
-    /* Garante que o container respeite a largura da tela e não estoure */
+
     max-width: 100%;
     
-    /* Opcional: Borda para indicar onde a tabela termina */
     border: 1px solid var(--cor-linha);
     border-radius: var(--raio-borda);
 }
@@ -796,7 +772,7 @@ button:disabled {
 .col-prio { width: 15%; text-align: center; }
 .col-status { width: 15%; text-align: center; }
 
-/* AQUI RESOLVE A SOBREPOSIÇÃO */
+/* Resolve a sobreposição */
 .col-actions { 
     width: 20%; 
     text-align: right; 
@@ -813,7 +789,6 @@ button:disabled {
 /* Alinha a coluna direita no grid (SQL) */
 .modal-col-right {
     grid-column: 2 / 3;
-    /* Adicione max-width para garantir que não force o grid em telas médias */
     max-width: 100%; 
 }
 
@@ -827,32 +802,32 @@ button:disabled {
     gap: 10px;
     align-items: center;
     width: 100%;
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
 
 .input-date-responsive {
     flex-grow: 1;
-    min-width: 140px; /* Garante que não fique muito pequeno */
+    min-width: 140px;
 }
 
-/* ============================================== */
-/* 10. Estilos do Modal de Confirmação (Custom)   */
-/* ============================================== */
+/* 10. Estilos do Modal de Confirmação */
 
 .modal-confirm-card {
-    max-width: 400px;         /* Mais estreito que o formulário */
-    width: 100%;              /* Responsivo */
-    border-radius: 12px;      /* Bordas bem arredondadas */
-    overflow: hidden;         /* Garante que nada saia do card */
-    background-color: white;  /* Fundo branco */
+    max-width: 400px;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: white;
 }
 
 .modal-confirm-body {
-    text-align: center;       /* Centraliza tudo */
-    padding: 30px 20px;       /* Espaçamento interno generoso */
+    text-align: center;
+    padding: 30px 20px;
 }
 
 .modal-confirm-title {
-    color: #761818;           /* Vermelho/Bordo */
+    color: #761818;
     margin-bottom: 15px;
     font-size: 20px;
     font-weight: bold;
@@ -869,18 +844,18 @@ button:disabled {
 .modal-confirm-actions {
     display: flex;
     justify-content: center;
-    gap: 15px;                /* Espaço entre os botões */
+    gap: 15px;
 }
 
 .btn-modal-action {
-    width: 120px;             /* Largura fixa para ficarem iguais */
-    height: 40px;             /* Altura confortável */
+    width: 120px;
+    height: 40px;
     font-size: 14px;
 }
 
-/* ============================================== */
-/* 11. Estilos do Modal de Regra (CRUD)           */
-/* ============================================== */
+
+/* 11. Estilos do Modal de Regra  */
+
 
 .modal-regra-card {
     max-width: 900px;
@@ -891,15 +866,12 @@ button:disabled {
 .regra-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    /* Ajustado o espaçamento vertical entre as linhas para 15px */
     row-gap: 15px; 
-    /* Ajustado o espaçamento horizontal entre as colunas para 30px */
     column-gap: 30px; 
 }
 
 /* Garante que a coluna SQL ocupe todo o espaço vertical da coluna de detalhes */
 .col-sql {
-    /* Começa na linha 1 e estica até a última linha do grid (que é definida pela coluna de detalhes) */
     grid-row: 1 / -1; 
     grid-column: 2 / 3;
     display: flex;
@@ -915,13 +887,13 @@ button:disabled {
 
 .col-sql textarea {
     flex-grow: 1; /* Permite que o textarea cresça e preencha o espaço */
-    min-height: 100px; /* Garante um tamanho mínimo */
+    min-height: 100px;
 }
 
 /* Coluna de Detalhes: Garante que os grupos de formulário sejam organizados */
 .col-detalhes {
     display: grid;
-    gap: 15px; /* Espaçamento entre os grupos */
+    gap: 15px;
 }
 
 /* Input Row (Inputs de 5 minutos, etc.) */
@@ -967,10 +939,9 @@ button:disabled {
     align-items: center;
     font-weight: 500;
     cursor: pointer;
-    margin-bottom: 0; /* Removendo margin da label */
+    margin-bottom: 0;
 }
 .roles-checkbox-container input[type="checkbox"] {
-    /* Estilizando o checkbox nativo */
     appearance: none;
     -webkit-appearance: none;
     width: 18px;
@@ -983,7 +954,7 @@ button:disabled {
     transition: background-color 0.2s, border-color 0.2s;
 }
 .roles-checkbox-container input[type="checkbox"]:checked {
-    background-color: var(--cor-botao-close); /* Verde */
+    background-color: var(--cor-botao-close);
     border-color: var(--cor-botao-close);
 }
 .roles-checkbox-container input[type="checkbox"]:checked::after {
@@ -998,7 +969,7 @@ button:disabled {
     line-height: 1;
 }
 
-/* --- Switch (Notificação Ativa) --- */
+/* Switch (Notificação Ativa) */
 .modal-switch {
     display: flex;
     align-items: center;
@@ -1016,7 +987,7 @@ button:disabled {
     gap: 8px;
     width: fit-content;
     padding: 10px 24px;
-    margin-top: 5px; /* Ajuste fino */
+    margin-top: 5px;
 }
 
 .icon-white-no-invert {
@@ -1048,11 +1019,10 @@ button:disabled {
     }
 }
 
-/* ============================================== */
-/* 12. Estilos Específicos do Modal de Usuário    */
-/* ============================================== */
 
-/* Container geral de notificações (Onde injetamos o grid) */
+/* 12. Estilos Específicos do Modal de Usuário    */
+
+/* Container geral de notificações */
 #config-notificacao-container {
     /* Reseta o estilo do .roles-checkbox-container */
     padding: 0 !important;
@@ -1062,7 +1032,7 @@ button:disabled {
     
     /* Grid de duas colunas: Endereço (2x) e Habilitar (1x) */
     grid-template-columns: 2fr 1fr; 
-    gap: 10px; /* Reduzido o gap para 10px para ficar mais compacto */
+    gap: 10px;
     align-items: center;
 }
 
@@ -1076,25 +1046,21 @@ button:disabled {
     margin-bottom: 2px;
     font-size: 11px !important;
     font-weight: 500;
-    display: block; /* Garante que a label ocupe a linha para input abaixo */
+    display: block;
 }
 
 /* Campo de Endereço (o input text) */
 #config-notificacao-container input[type="text"] {
     width: 100%;
-    /* Reduz o padding vertical para manter a linha compacta */
     padding: 6px 8px; 
 }
 
 /* Estilo para o campo de Habilitado (a coluna do toggle) */
 #config-notificacao-container .modal-switch {
-    /* Centraliza o toggle na segunda coluna */
     justify-content: center;
 }
 
-/* =====================================*/
 /* 13. Estilos do Formulário de Login  */
-/* ==================================== */
 
 .login-form {
     width: 100%;
@@ -1123,11 +1089,11 @@ button:disabled {
 .btn-full {
     width: 100%;
     margin-top: 8px;
-    justify-content: center; /* Centraliza texto se for flex */
+    justify-content: center;
 }
 
 .btn-secondary {
-    background-color: #6c757d; /* Cinza para botão secundário */
+    background-color: #6c757d;
     color: white;
 }
 
@@ -1140,13 +1106,12 @@ button:disabled {
     margin-top: 10px;
 }
 
-/* Utilitário para esconder elementos (usado no toggle Login/Cadastro) */
+/* Utilizado para esconder elementos (usado no toggle Login/Cadastro) */
 .hidden {
     display: none !important;
 }
-/* ============================================== */
-/* MODAL DETALHES INCIDENTE (FINAL)               */
-/* ============================================== */
+
+/* MODAL DETALHES INCIDENTE */
 
 .modal-detalhe-card {
     max-width: 1000px;
@@ -1219,7 +1184,7 @@ button:disabled {
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 12px;
-    border-left: 4px solid #2C5132; /* Padrão */
+    border-left: 4px solid #2C5132;
     position: relative;
 }
 
@@ -1270,30 +1235,27 @@ button:disabled {
     .detalhe-col-historico { border-right: none; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
 }
 
-/* ============================================== */
-/* Responsividade da Navbar (Mobile/Tablet)       */
-/* ============================================== */
+
+/* Responsividade da Navbar (Mobile/Tablet)  */
 
 @media (max-width: 768px) {
     
-    /* 1. Reduz a altura da barra de navegação */
     .navbar {
-        height: 60px; /* Reduzido de 100px */
+        height: 60px;
         padding: 8px 12px;
     }
 
-    /* 2. Reduz o tamanho do logo principal (QQ Monitor) */
+
     .logo {
-        height: 40px; /* Reduzido de 80px */
+        height: 40px;
     }
 
-    /* 3. ESCONDE O SEGUNDO LOGO (Lojas Quero-Quero) */
-    /* O seletor :last-child pega a última imagem dentro de .nav-brand */
+    /* Esconde logo pegando a última imagem  */
+
     .nav-brand .logo:last-child {
         display: none;
     }
 
-    /* 4. Ajustes nos Links de Navegação para caberem na tela */
     .nav-links {
         gap: 4px; /* Menor espaço entre links */
     }
@@ -1303,7 +1265,7 @@ button:disabled {
         padding: 6px 8px;
     }
 
-    /* 5. Ajuste do botão de perfil (Avatar) */
+    /* 5. Ajuste do botão de perfil */
     .profile-button {
         width: 35px;
         height: 35px;
@@ -1317,7 +1279,113 @@ button:disabled {
     }
 
     .content-wrapper {
-        /* 60px (navbar) + 20px (espaço) = 80px */
         margin-top: 80px; 
     }
+}
+
+/*  ESCALONAMENTO (Modal Regra) */
+.escalonamento-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 5px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.escalonamento-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.escalonamento-row input[type="number"] {
+    width: 50px;
+    padding: 4px;
+    text-align: center;
+}
+
+.escalonamento-row select {
+    flex-grow: 1;
+    padding: 4px;
+    font-size: 12px;
+}
+
+.btn-remove-passo {
+    background: #ffebee;
+    color: var(--cor-status-aberto);
+    border: 1px solid #ffcdd2;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-weight: bold;
+    font-size: 10px;
+}
+.btn-remove-passo:hover {
+    background: #ffcdd2;
+}
+
+.btn-politica {
+    background-color: var(--cor-botao-exportar);
+    color: white;
+}
+
+/* Badges de Status da Escala */
+.escala-badge {
+    text-align: center;
+    padding: 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    margin-top: 15px;
+    width: 100%;
+    display: block;
+}
+
+/* Plantonista atual (Verde) */
+.escala-status-current {
+    background-color: #E6F7EC; 
+    color: #1E4620;
+    border: 1px solid #A8DAB5;
+}
+
+/* Próximo plantonista (Amarelo) */
+.escala-status-next {
+    background-color: #FFF9DB;
+    color: #856404;
+    border: 1px solid #FFEeba;
+}
+
+/* Aguardando a escala (Cinza) */
+.escala-status-future {
+    background-color: #F3F3F3;
+    color: #666;
+    border: 1px solid #DDD;
+}
+
+/* Finalizado (Riscado) */
+.escala-status-past {
+    background-color: #EEE;
+    color: #999;
+    text-decoration: line-through;
+    border: 1px solid #E0E0E0;
+}
+
+/* Borda Verde no Card Ativo */
+.card-active-border {
+    box-shadow: 0 4px 12px rgba(44, 81, 50, 0.1);
+}
+
+/* Botões de Ação no Card */
+.card-actions-container {
+    display: flex;
+    gap: 8px;
 }

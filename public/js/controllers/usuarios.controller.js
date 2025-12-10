@@ -13,15 +13,15 @@ let tiposCanalCache = [];
 let idUsuarioParaDeletar = null; 
 
 export function initUsuariosController() {
-    // === MODAL DE EDIÇÃO ===
+    //  MODAL DE EDIÇÃO 
     if (ui.usuarios.btnCancel) ui.usuarios.btnCancel.onclick = () => ui.usuarios.modal.style.display = 'none';
     if (ui.usuarios.form) ui.usuarios.form.onsubmit = handleUsuarioSubmit;
     
-    // === FILTROS ===
+    // FILTROS 
     if (ui.usuarios.search) ui.usuarios.search.onkeyup = loadUsuariosView;
     if (ui.usuarios.filterPerfil) ui.usuarios.filterPerfil.onchange = loadUsuariosView;
 
-    // === MODAL DE DELETE  ===
+    // MODAL DE DELETE  
     const modalDelete = document.getElementById('modal-delete-usuario');
     const btnCancelDelete = document.getElementById('btn-del-usuario-fechar');
     const btnConfirmDelete = document.getElementById('btn-del-usuario-confirmar');
@@ -51,7 +51,7 @@ export async function loadUsuariosView() {
         
         renderUsuariosTable(users, perfisCache, {
             onEdit: openUsuarioModal,
-            onDelete: openDeleteConfirmation // Mudamos para abrir o modal
+            onDelete: openDeleteConfirmation 
         });
     } catch (e) { console.error(e); }
 }
@@ -167,7 +167,6 @@ async function executeDeleteUsuario() {
         showMessage('Usuário e vínculos removidos com sucesso.', 'success');
         loadUsuariosView();
         
-        // Fecha modal
         document.getElementById('modal-delete-usuario').style.display = 'none';
         
     } catch (e) {

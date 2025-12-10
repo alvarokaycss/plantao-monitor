@@ -173,7 +173,7 @@ def gerenciar_incidente(conn, id_regra, nome_regra, prioridade, resultado):
         RETURNING id_incidente
     """, (id_regra, prioridade, amostra_final))
     
-    # Acessamos o ID pela chave do dicionário retornado
+    # Acessam o ID pela chave do dicionário retornado
     novo_id = cur.fetchone()['id_incidente']
     conn.commit()
 
@@ -181,59 +181,84 @@ def gerenciar_incidente(conn, id_regra, nome_regra, prioridade, resultado):
 
 
 def processar_notificacoes_email(conn, id_incidente, id_regra, nome_regra, prioridade):
-    """Notifica APENAS via E-mail (O Webhook fica para o final)"""
-    print(f"   @ Buscando plantonistas (Email)...")
-    cur = conn.cursor()
-    query = f"""
-        SELECT DISTINCT u.id_usuario, cn.id_tipo_canal, cn.endereco_notificacao, tcn.nome
-        FROM {DB_SCHEMA}.regra_role rr
-        JOIN {DB_SCHEMA}.escala e ON rr.id_role = e.id_role
-        JOIN {DB_SCHEMA}.usuario u ON e.id_usuario = u.id_usuario
-        JOIN {DB_SCHEMA}.configuracoes_notificacao cn ON u.id_usuario = cn.id_usuario
-        JOIN {DB_SCHEMA}.tipos_canal_notificacao tcn ON cn.id_tipo_canal = tcn.id_tipo_canal
-        WHERE rr.id_regra = %s AND NOW() BETWEEN e.data_inicio AND e.data_fim AND cn.habilitado = TRUE
     """
-    cur.execute(query, (id_regra,))
-    destinatarios = cur.fetchall()
-
-    if not destinatarios:
-        print("   @ Nenhum plantonista ativo encontrado.")
-        return
-
-    # Iteração sobre lista de dicionários
-    for row in destinatarios:
-        uid = row['id_usuario']
-        cid = row['id_tipo_canal']
-        endereco = row['endereco_notificacao']
-        canal = row['nome']
-
-        status_envio = 'ERRO'
-        msg_txt = f"A regra '{nome_regra}' falhou. Incidente #{id_incidente}."
-        
-        # Só envia EMAIL
-        if 'EMAIL' in canal.upper():
-            print(f"    Enviando para {endereco}...")
-            html = f"""
-                <h2>🚨 Alerta de Incidente #{id_incidente}</h2>
-                <p><strong>Regra:</strong> {nome_regra}</p>
-                <p><strong>Prioridade:</strong> {prioridade}</p>
-                <p>Acesse o painel para agir.</p>
-            """
-            if enviar_email_smtp(endereco, f"[Monitor] Incidente #{id_incidente}", html):
-                status_envio = 'ENVIADO'
-            else:
-                status_envio = 'FALHA_SMTP'
-        else:
-            status_envio = 'SIMULADO'
-
-        cur.execute(f"""
-            INSERT INTO {DB_SCHEMA}.log_notificacoes
-            (id_incidente, id_usuario_destinatario, id_tipo_canal, status_envio, destino_envio, conteudo_enviado, data_envio)
-            VALUES (%s, %s, %s, %s, %s, %s, NOW())
-        """, (id_incidente, uid, cid, status_envio, endereco, msg_txt))
+    Envia notificação inicial (Nível 0) para as Roles configuradas na regra.
+    Respeita: Escala (quem está de plantão) + Janela de Horário do Usuário.
+    """
+    print(f"   >>> [Executor] Buscando destinatários para notificação inicial (Regra {id_regra})...")
     
-    conn.commit()
+    try:
+        with conn.cursor() as cur:
+            query_destinatarios = f"""
+                SELECT DISTINCT u.email, u.nome, u.id_usuario, cn.id_tipo_canal
+                FROM {DB_SCHEMA}.regra_role rr
+                JOIN {DB_SCHEMA}.escala e ON rr.id_role = e.id_role
+                JOIN {DB_SCHEMA}.usuario u ON e.id_usuario = u.id_usuario
+                JOIN {DB_SCHEMA}.configuracoes_notificacao cn ON u.id_usuario = cn.id_usuario
+                WHERE 
+                    rr.id_regra = %s
+                    AND NOW() BETWEEN e.data_inicio AND e.data_fim
+                    AND cn.habilitado = TRUE
+                    AND cn.id_tipo_canal = 2 -- EMAIL
+                    
+                    -- Lógica de Janela de Não Perturbe
+                    AND (
+                        (u.notificacao_janela_inicio IS NULL OR u.notificacao_janela_fim IS NULL)
+                        OR
+                        (
+                            u.notificacao_janela_inicio <= u.notificacao_janela_fim
+                            AND CURRENT_TIME BETWEEN u.notificacao_janela_inicio AND u.notificacao_janela_fim
+                        )
+                        OR
+                        (
+                            u.notificacao_janela_inicio > u.notificacao_janela_fim
+                            AND (
+                                CURRENT_TIME >= u.notificacao_janela_inicio
+                                OR CURRENT_TIME <= u.notificacao_janela_fim
+                            )
+                        )
+                    )
+            """
+            cur.execute(query_destinatarios, (id_regra,))
+            destinatarios = cur.fetchall()
+            
+            if not destinatarios:
+                print(f"   >>> [Executor] Nenhum plantonista disponível/ativo no momento para receber e-mail.")
+                return
 
+            for dest in destinatarios:
+                email = dest['email']
+                nome_dest = dest['nome']
+                cid = dest['id_tipo_canal']
+                
+                assunto = f" Novo Incidente #{id_incidente}: {nome_regra}"
+                corpo = f"""
+                    <h2>Olá, {nome_dest}</h2>
+                    <p>Um novo incidente foi detectado pelo monitoramento.</p>
+                    <ul>
+                        <li><strong>Regra:</strong> {nome_regra}</li>
+                        <li><strong>Prioridade:</strong> {prioridade}</li>
+                        <li><strong>Data:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</li>
+                    </ul>
+                    <p>Acesse o painel para dar o aceite (ACK).</p>
+                """
+
+                # Envia e Loga
+                if enviar_email_smtp(email, assunto, corpo):
+                    print(f"   >>> E-mail enviado para {email}")
+                    # Log
+                    cur.execute(f"""
+                        INSERT INTO {DB_SCHEMA}.log_notificacoes
+                        (id_incidente, id_usuario_destinatario, id_tipo_canal, status_envio, destino_envio, conteudo_enviado)
+                        VALUES (%s, %s, %s, 'ENVIADO', %s, 'NOTIFICACAO_INICIAL')
+                    """, (id_incidente, dest['id_usuario'], cid, email))
+                else:
+                    print(f"   !!! Falha ao enviar e-mail para {email}")
+
+            conn.commit()
+
+    except Exception as e:
+        print(f"!!! Erro ao processar notificações de e-mail: {e}")
 
 def finalizar_job(conn, id_fila, id_regra, resultado, id_incidente, tentativas_atuais, max_erros):
     cur = conn.cursor()
@@ -259,7 +284,7 @@ def finalizar_job(conn, id_fila, id_regra, resultado, id_incidente, tentativas_a
 
     conn.commit()
 
-# --- ORQUESTRADOR PRINCIPAL ---
+# ORQUESTRADOR PRINCIPAL 
 
 def processar_fila():
     conn = get_db_connection()

@@ -5,7 +5,6 @@ const { asInteger, normalizeDateToISO } = require("../utils/helpers");
 
 /**
  * GET /escalas
- * Lista todas as escalas cadastradas.
  */
 exports.getEscalas = async (req, res) => {
     try {
@@ -19,50 +18,96 @@ exports.getEscalas = async (req, res) => {
 
 /**
  * POST /escalas
- * Cria uma nova entrada de escala.
  */
 exports.createEscala = async (req, res) => {
     const { id_usuario, id_role, data_inicio, data_fim } = req.body || {};
 
-    // 1. Validação de presença
     if (!id_usuario || !id_role || !data_inicio || !data_fim) {
         return res.status(400).json({ error: "Campos obrigatórios: id_usuario, id_role, data_inicio, data_fim" });
     }
 
-    // 2. Normalização e Validação de Tipos
     const idUsuarioVal = asInteger(id_usuario);
     const idRoleVal = asInteger(id_role); 
-    
-    if (!idUsuarioVal || !idRoleVal) { 
-        return res.status(400).json({ error: "id_usuario e id_role devem ser números inteiros positivos." });
-    }
-
     const dataInicioVal = normalizeDateToISO(data_inicio);
     const dataFimVal = normalizeDateToISO(data_fim);
     
-    if (!dataInicioVal || !dataFimVal) {
-        return res.status(400).json({ error: "data_inicio ou data_fim inválidas. Use uma data válida." });
+    if (!idUsuarioVal || !idRoleVal || !dataInicioVal || !dataFimVal) {
+        return res.status(400).json({ error: "Dados inválidos." });
     }
 
-    // Validação de regra de negócio (data_fim > data_inicio)
     if (new Date(dataFimVal) <= new Date(dataInicioVal)) {
-        return res.status(400).json({ error: "data_fim deve ser maior que data_inicio." });
+        return res.status(400).json({ error: "Data final deve ser maior que data inicial." });
     }
     
-    // 3. Chamada ao Service
     try {
         const novaEscala = await EscalasService.createEscala({
             idUsuarioVal, idRoleVal, dataInicioVal, dataFimVal
         });
-        
         return res.status(201).json(novaEscala);
 
     } catch (error) {
-        // Violação de chave estrangeira (code 23503)
-        if (error && error.code === "23503") {
-            return res.status(409).json({ error: "Usuário (id_usuario) ou Role (id_role) não encontrado." });
+        if (error.code === "23503") {
+            return res.status(409).json({ error: "Usuário ou Role não encontrados." });
         }
         console.error("Erro ao inserir escala:", error);
         return res.status(500).json({ error: "Erro interno ao cadastrar escala" });
+    }
+};
+
+/**
+ * DELETE /escalas/:id
+ */
+exports.deleteEscala = async (req, res) => {
+    const idEscala = asInteger(req.params.id);
+    if (!idEscala) return res.status(400).json({ error: "ID inválido." });
+
+    try {
+        await EscalasService.deleteEscala(idEscala);
+        res.json({ message: "Escala removida com sucesso." });
+    } catch (error) {
+        console.error("Erro deleteEscala:", error);
+        res.status(500).json({ error: "Erro ao excluir escala." });
+    }
+};
+
+/**
+ * PUT /escalas/:id
+ */
+exports.updateEscala = async (req, res) => {
+    const idEscala = asInteger(req.params.id);
+    const { id_usuario, id_role, data_inicio, data_fim } = req.body || {};
+
+    if (!idEscala) return res.status(400).json({ error: "ID da escala inválido." });
+
+    // 1. Validação e Normalização
+    const idUsuarioVal = asInteger(id_usuario);
+    const idRoleVal = asInteger(id_role); 
+    const dataInicioVal = normalizeDateToISO(data_inicio);
+    const dataFimVal = normalizeDateToISO(data_fim);
+
+    if (!idUsuarioVal || !idRoleVal || !dataInicioVal || !dataFimVal) {
+        return res.status(400).json({ error: "Dados inválidos. Verifique os campos obrigatórios." });
+    }
+
+    if (new Date(dataFimVal) <= new Date(dataInicioVal)) {
+        return res.status(400).json({ error: "A data final deve ser posterior à data inicial." });
+    }
+
+    try {
+        await EscalasService.updateEscala(idEscala, {
+            idUsuarioVal, idRoleVal, dataInicioVal, dataFimVal
+        });
+
+        res.json({ message: "Escala atualizada com sucesso." });
+
+    } catch (error) {
+        if (error.message === 'Escala não encontrada.') {
+            return res.status(404).json({ error: error.message });
+        }
+        if (error.code === "23503") {
+            return res.status(409).json({ error: "Usuário ou Role não encontrados." });
+        }
+        console.error(`Erro updateEscala ${idEscala}:`, error);
+        res.status(500).json({ error: "Erro interno ao atualizar escala." });
     }
 };

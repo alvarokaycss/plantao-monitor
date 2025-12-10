@@ -14,6 +14,7 @@ import { initIncidentesController, loadIncidentesView, openDetalheIncidente } fr
 import { initRegrasController, loadRegrasView } from './controllers/regras.controller.js';
 import { initUsuariosController, loadUsuariosView } from './controllers/usuarios.controller.js';
 import { initAnalyticsController } from "./controllers/analytics.controller.js";
+import { initEscalasController, loadEscalasView } from './controllers/escalas.controller.js';
 
 // --- CONFIGURAÇÃO DE PERMISSÕES ---
 // Mapeia o nome da view (data-view) para a chave do recurso exigido no banco
@@ -52,6 +53,7 @@ async function navigateTo(viewName) {
         if (viewName === 'incidentes') await loadIncidentesView();
         if (viewName === 'regras') await loadRegrasView();
         if (viewName === 'usuarios') await loadUsuariosView();
+        if (viewName === 'escalas') await loadEscalasView();
         // Adicione aqui para escalas futuramente
     } catch (e) { 
         console.error("Erro ao navegar:", e); 
@@ -117,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRegrasController();
     initUsuariosController();
     initAnalyticsController();
+    initEscalasController();
 
     // 2. Configura Listener de Navegação
     ui.navLinks.forEach(link => {
@@ -215,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Não logado (Logout ou Inicial)
             ui.loginView.style.display = 'flex';
             ui.appContainer.style.display = 'none';
-            currentUserResources = []; // Limpa permissões
+            currentUserResources = [];
             
             if(!ui.loginStatus.classList.contains('msg')) {
                  ui.loginStatus.textContent = 'Aguardando credenciais...';

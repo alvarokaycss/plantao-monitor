@@ -10,7 +10,7 @@ export function initAnalyticsController() {
     }
 
     if (ui.analytics.modal) {
-        // Fecha ao clicar fora da imagem (no overlay)
+        // Fecha ao clicar fora da imagem
         ui.analytics.modal.addEventListener('click', (e) => {
             if (e.target === ui.analytics.modal) {
                 ui.analytics.modal.style.display = 'none';
@@ -21,14 +21,14 @@ export function initAnalyticsController() {
 
 async function handleGerarAnalytics() {
     const btn = ui.analytics.btnGerar;
-    const originalText = btn.innerHTML; // Preserva o ícone e texto
+    const originalText = btn.innerHTML;
     
-    // UI Feedback
+    
     btn.textContent = 'Gerando Gráfico...';
     btn.disabled = true;
 
     try {
-        // Chama o endpoint que dispara o script Python
+        
         const response = await fetchApi('/analytics/gerar', { method: 'POST' });
 
         if (response && response.success && response.imageUrl) {
@@ -44,7 +44,7 @@ async function handleGerarAnalytics() {
         console.error("Falha analytics:", error);
         showMessage('Falha na comunicação com o servidor de Analytics.', 'error');
     } finally {
-        // Restaura o botão
+        
         btn.innerHTML = originalText;
         btn.disabled = false;
     }

@@ -113,7 +113,6 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
 
 /**
  * Atualiza as configurações de um usuário (perfil, ativo, recursos e notificações) em uma transação.
- * (Funcionalidade RF03 de Admin)
  * @param {number} idUsuarioParaConfigurar - ID do usuário alvo.
  * @param {object} payload - Dados de configuração.
  */
@@ -124,7 +123,7 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
     try {
         await client.query('BEGIN');
 
-        // --- Passo 1: Atualizar a tabela 'usuario' (perfil e status ativo)
+        // Atualizar a tabela 'usuario' (perfil e status ativo)
         const updateUsuarioQuery = `
             UPDATE ${SCHEMA}.usuario 
             SET 
@@ -139,7 +138,7 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
             throw new Error("Usuário não encontrado para configurar.");
         }
 
-        // --- Passo 2: Atualizar 'usuario_recursos' (M:N) (Toggles)
+        // Atualizar 'usuario_recursos' (M:N) (Toggles)
         await client.query(`DELETE FROM ${SCHEMA}.usuario_recursos WHERE id_usuario = $1`, [idUsuarioParaConfigurar]);
 
         if (recursosVal.length > 0) {
@@ -149,12 +148,11 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
         }
 
 
-        // --- Passo 3: Atualizar 'configuracoes_notificacao' (1:N) (Canais)
+        // Atualizar 'configuracoes_notificacao' (1:N) (Canais)
         await client.query(`DELETE FROM ${SCHEMA}.configuracoes_notificacao WHERE id_usuario = $1`, [idUsuarioParaConfigurar]);
 
         if (notificacoesVal.length > 0) {
-            // CORREÇÃO: O multiplicador deve ser 4, pois inserimos 4 campos dinâmicos por linha (Tipo, Endereço, Habilitado, Dispositivo)
-            // O id_usuario ($1) é fixo e não conta no deslocamento do array de valores.
+            // multiplicador deve ser 4, pois inserimos 4 campos dinâmicos por linha (Tipo, Endereço, Habilitado, Dispositivo)
             const insertNotificacoesQuery = 'INSERT INTO ' + `${SCHEMA}.configuracoes_notificacao` +
                 ' (id_usuario, id_tipo_canal, endereco_notificacao, habilitado, nome_dispositivo) VALUES ' +
                 notificacoesVal.map((n, i) =>

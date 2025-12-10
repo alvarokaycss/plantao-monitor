@@ -60,6 +60,7 @@ exports.selectRegrasFiltradas = async (filtros = {}) => {
 exports.getRegraDetalhes = async (idRegraVal) => {
     const client = await pool.connect();
     try {
+        // 1. Dados Básicos
         const regraQuery = `
             SELECT 
                 r.*, 
@@ -71,6 +72,7 @@ exports.getRegraDetalhes = async (idRegraVal) => {
             WHERE r.id_regra = $1;
         `;
         
+        // 2. Último Log
         const logQuery = `
             SELECT * FROM ${SCHEMA}.log_execucoes_regras 
             WHERE id_regra = $1 
@@ -78,16 +80,27 @@ exports.getRegraDetalhes = async (idRegraVal) => {
             LIMIT 1;
         `;
 
+        // 3. Busca Passos de Escalonamento
+        const escalonamentoQuery = `
+            SELECT 
+                id_escalonamento, minutos_apos_abertura, id_role_destino, id_tipo_canal 
+            FROM ${SCHEMA}.regra_escalonamento
+            WHERE id_regra = $1
+            ORDER BY minutos_apos_abertura ASC;
+        `;
+
         const regraRes = await client.query(regraQuery, [idRegraVal]);
-        
         if (regraRes.rows.length === 0) return null;
         
         const regra = regraRes.rows[0];
-        
         const logRes = await client.query(logQuery, [idRegraVal]);
-        const ultimoLog = logRes.rows.length > 0 ? logRes.rows[0] : null;
+        const escRes = await client.query(escalonamentoQuery, [idRegraVal]);
 
-        return { info: regra, ultimo_log: ultimoLog };
+        return { 
+            info: regra, 
+            ultimo_log: logRes.rows[0] || null,
+            escalonamento: escRes.rows // Retorna array vazio se não tiver passos
+        };
 
     } finally {
         client.release();
@@ -104,14 +117,14 @@ exports.createRegra = async (payload, idUsuarioCriadorVal) => {
     const { 
         idBancoVal, nome, consulta_sql, intervaloVal, qntErroMaxVal, prioridadeVal, rolesVal,
         descricao, janela_inicio, janela_fim, data_adiar_inicio, data_adiar_fim,
-        data_silenciar_inicio, data_silenciar_fim 
+        data_silenciar_inicio, data_silenciar_fim, escalonamentoVal
     } = payload;
     
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        // --- Passo 1: Inserir na tabela 'regra'
+        // 1. Inserir Regra
         const insertRegraQuery = `
             INSERT INTO ${SCHEMA}.regra (
                 id_banco_dados, nome, consulta_sql, intervalo_minutos, qnt_erro_max, prioridade, 
@@ -124,34 +137,44 @@ exports.createRegra = async (payload, idUsuarioCriadorVal) => {
         `;
         const regraValues = [
             idBancoVal, nome, consulta_sql, intervaloVal, qntErroMaxVal, prioridadeVal,
-            idUsuarioCriadorVal, 
-            descricao || null, 
-            janela_inicio || '00:00:00', 
-            janela_fim || '23:59:59', 
-            normalizeDateToISO(data_adiar_inicio), 
-            normalizeDateToISO(data_adiar_fim),
-            normalizeDateToISO(data_silenciar_inicio), 
-            normalizeDateToISO(data_silenciar_fim)
+            idUsuarioCriadorVal, descricao || null, janela_inicio || '00:00:00', janela_fim || '23:59:59', 
+            normalizeDateToISO(data_adiar_inicio), normalizeDateToISO(data_adiar_fim),
+            normalizeDateToISO(data_silenciar_inicio), normalizeDateToISO(data_silenciar_fim)
         ];
         
         const { rows: regraRows } = await client.query(insertRegraQuery, regraValues);
-        const novaRegra = regraRows[0];
-        const newRegraId = novaRegra.id_regra;
+        const newRegraId = regraRows[0].id_regra;
 
-        // --- Passo 2: Inserir na tabela 'regra_role' (M:N)
-        const insertRolesQuery = 'INSERT INTO ' + `${SCHEMA}.regra_role` + ' (id_regra, id_role) VALUES ' + 
-             rolesVal.map((id, index) => `($1, $${index + 2})`).join(', ');
+        // 2. Inserir Roles
+        if (rolesVal.length > 0) {
+            const insertRolesQuery = 'INSERT INTO ' + `${SCHEMA}.regra_role` + ' (id_regra, id_role) VALUES ' + 
+                 rolesVal.map((_, i) => `($1, $${i + 2})`).join(', ');
+            await client.query(insertRolesQuery, [newRegraId, ...rolesVal]);
+        }
 
-        await client.query(insertRolesQuery, [newRegraId, ...rolesVal]);
+        // 3. (NOVO) Inserir Escalonamento
+        if (escalonamentoVal && escalonamentoVal.length > 0) {
+            // Espera payload: [{ minutos: 15, role: 2, canal: 1 }, ...]
+            const insertEscQuery = `
+                INSERT INTO ${SCHEMA}.regra_escalonamento 
+                (id_regra, minutos_apos_abertura, id_role_destino, id_tipo_canal) 
+                VALUES 
+            ` + escalonamentoVal.map((_, i) => 
+                `($1, $${i*3 + 2}, $${i*3 + 3}, $${i*3 + 4})`
+            ).join(', ');
+
+            // Flatmap para gerar array linear de parâmetros [idRegra, min1, role1, canal1, min2, role2, canal2...]
+            const escParams = [newRegraId, ...escalonamentoVal.flatMap(e => [e.minutos, e.role, e.canal])];
+            
+            await client.query(insertEscQuery, escParams);
+        }
 
         await client.query('COMMIT');
-        
-        // Retorna a regra criada E os roles associados (para o frontend)
-        return { ...novaRegra, roles: rolesVal };
+        return { ...regraRows[0], roles: rolesVal, escalonamento: escalonamentoVal };
 
     } catch (err) {
         await client.query('ROLLBACK');
-        throw err; // Lança o erro para o Controller tratar o código de status
+        throw err;
     } finally {
         if (client) client.release();
     }
@@ -168,14 +191,14 @@ exports.updateRegra = async (idRegraVal, payload, idUsuarioAtualizacao) => {
     const { 
         idBancoVal, nome, consulta_sql, intervaloVal, qntErroMaxVal, prioridadeVal, 
         rolesVal, descricao, janela_inicio, janela_fim, data_adiar_inicio, 
-        data_adiar_fim, data_silenciar_inicio, data_silenciar_fim
+        data_adiar_fim, data_silenciar_inicio, data_silenciar_fim, escalonamentoVal
     } = payload;
 
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        // Passo A: Atualizar a tabela principal 'regra'
+        // 1. Atualizar Tabela Regra
         const updateQuery = `
             UPDATE ${SCHEMA}.regra
             SET
@@ -190,29 +213,37 @@ exports.updateRegra = async (idRegraVal, payload, idUsuarioAtualizacao) => {
 
         const values = [
             idBancoVal, nome, consulta_sql, intervaloVal, qntErroMaxVal, prioridadeVal,
-            descricao || null,
-            janela_inicio || '00:00:00',
-            janela_fim || '23:59:59',
-            normalizeDateToISO(data_adiar_inicio),
-            normalizeDateToISO(data_adiar_fim),
-            normalizeDateToISO(data_silenciar_inicio),
-            normalizeDateToISO(data_silenciar_fim),
-            idUsuarioAtualizacao,
-            idRegraVal
+            descricao || null, janela_inicio || '00:00:00', janela_fim || '23:59:59',
+            normalizeDateToISO(data_adiar_inicio), normalizeDateToISO(data_adiar_fim),
+            normalizeDateToISO(data_silenciar_inicio), normalizeDateToISO(data_silenciar_fim),
+            idUsuarioAtualizacao, idRegraVal
         ];
 
         const result = await client.query(updateQuery, values);
-        if (result.rowCount === 0) {
-            throw new Error('Regra não encontrada para atualização.');
-        }
+        if (result.rowCount === 0) throw new Error('Regra não encontrada.');
 
-        // Passo B: Atualizar a relação M:N (Roles) - Limpar e Re-inserir
+        // 2. Atualizar Roles (Limpar e Recriar)
         await client.query(`DELETE FROM ${SCHEMA}.regra_role WHERE id_regra = $1`, [idRegraVal]);
-
         if (rolesVal.length > 0) {
             const insertRolesQuery = 'INSERT INTO ' + `${SCHEMA}.regra_role` + ' (id_regra, id_role) VALUES ' + 
-                 rolesVal.map((id, index) => `($1, $${index + 2})`).join(', ');
+                 rolesVal.map((_, i) => `($1, $${i + 2})`).join(', ');
             await client.query(insertRolesQuery, [idRegraVal, ...rolesVal]);
+        }
+
+        // 3. (NOVO) Atualizar Escalonamento (Limpar e Recriar)
+        await client.query(`DELETE FROM ${SCHEMA}.regra_escalonamento WHERE id_regra = $1`, [idRegraVal]);
+        
+        if (escalonamentoVal && escalonamentoVal.length > 0) {
+            const insertEscQuery = `
+                INSERT INTO ${SCHEMA}.regra_escalonamento 
+                (id_regra, minutos_apos_abertura, id_role_destino, id_tipo_canal) 
+                VALUES 
+            ` + escalonamentoVal.map((_, i) => 
+                `($1, $${i*3 + 2}, $${i*3 + 3}, $${i*3 + 4})`
+            ).join(', ');
+
+            const escParams = [idRegraVal, ...escalonamentoVal.flatMap(e => [e.minutos, e.role, e.canal])];
+            await client.query(insertEscQuery, escParams);
         }
 
         await client.query('COMMIT');
@@ -287,29 +318,25 @@ exports.deleteRegra = async (idRegraVal) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-
-        // 1. Remove associações com Roles
+         
+        // regra_role não tem CASCADE na migration original, então deletamos manual
         await client.query(`DELETE FROM ${SCHEMA}.regra_role WHERE id_regra = $1`, [idRegraVal]);
-
-        // 2. Tenta excluir a regra
+        // Escalonamento deleta sozinho pelo Cascade, ou deletamos manual pra garantir
+        await client.query(`DELETE FROM ${SCHEMA}.regra_escalonamento WHERE id_regra = $1`, [idRegraVal]);
+        
         const query = `DELETE FROM ${SCHEMA}.regra WHERE id_regra = $1 RETURNING id_regra`;
         const { rowCount } = await client.query(query, [idRegraVal]);
-
-        if (rowCount === 0) {
-            throw new Error('Regra não encontrada.');
-        }
+        if (rowCount === 0) throw new Error('Regra não encontrada.');
 
         await client.query('COMMIT');
         return idRegraVal;
-
     } catch (error) {
         await client.query('ROLLBACK');
         throw error;
     } finally {
         if (client) client.release();
     }
-};
-
+}
 /**
  * Executa uma consulta SQL em modo de teste (Sandbox).
  * @param {string} consultaSql - A consulta SQL a ser executada.

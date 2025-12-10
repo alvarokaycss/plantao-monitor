@@ -6,6 +6,7 @@ import time
 import schedule
 from datetime import datetime
 from db import get_db_connection, DB_SCHEMA
+from escalonador import processar_escalonamentos
 
 def verificar_regras():
     print(f"[{datetime.now()}] Verificando regras...")
@@ -16,7 +17,6 @@ def verificar_regras():
     try:
         with conn.cursor() as cur:
             
-            # --- QUERY ---
             query = f"""
                 INSERT INTO {DB_SCHEMA}.fila_runner (id_regra, status)
                 SELECT id_regra, 'PENDENTE'
@@ -44,13 +44,14 @@ def verificar_regras():
     finally:
         conn.close()
 
-
+schedule.every(1).minute.do(processar_escalonamentos)
 schedule.every(1).minutes.do(verificar_regras)
 print(f"Orquestrador Python Inicializado (Schema: {DB_SCHEMA})...")
 
 
 if __name__ == "__main__":
     # Executa pela primeira vez
+    processar_escalonamentos()
     verificar_regras()
     
     while True:

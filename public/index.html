@@ -171,9 +171,6 @@
 
             </div>
 
-
-            <!-- Outras Views pro futuro  -->
-
             <div id="view-regras" class="view" style="display: none;">
 
                 <section class="filter-container card filter-row">
@@ -397,11 +394,22 @@
                                             notificação.</small>
                                     </div>
 
-                                    <div class="form-group modal-row modal-full-width modal-switch">
-                                        <label for="regra-notificacao">Notificação (Ativa)</label>
-                                        <input type="checkbox" id="regra-notificacao" name="notificacao_ativa" checked>
-                                    </div>
+                                    <div class="form-group modal-full-width"
+                                        style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 10px;">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                            <label style="margin:0; color:#2C5132;">Política de Escalonamento</label>
+                                            <button type="button" id="btn-add-passo" class="btn-politica"
+                                                style="padding: 2px 8px; font-size: 11px;">
+                                                + Adicionar
+                                            </button>
+                                        </div>
 
+                                        <div id="container-passos-escalonamento" class="escalonamento-list">
+                                            <p class="help-text" id="msg-sem-escalonamento">Nenhum escalonamento
+                                                configurado.</p>
+                                        </div>
+                                    </div>
                                 </div>
 
 
@@ -439,8 +447,88 @@
             </div>
 
             <div id="view-escalas" class="view" style="display: none;">
-                <h2>Escalas</h2>
+
+                <section class="panel-header card" style="margin-bottom: 20px;">
+                    <div class="panel-header-title">
+                        <h2>Gestão de Rotas</h2>
+                        <button id="btn-add-escala" class="btn-primary">
+                            Adicionar Plantonista
+                        </button>
+                    </div>
+                </section>
+
+                <section id="escalas-grid" class="kpi-container"
+                    style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                    <div class="loading-placeholder">Carregando escalas...</div>
+                </section>
+
+                <div id="modal-escala" class="modal-overlay" style="display: none;">
+                    <div class="modal-card">
+                        <div class="modal-header">
+                            <h3>Adicionar novo plantonista</h3>
+                        </div>
+                        <div class="modal-body">
+                            <form id="form-escala">
+                                <div class="form-group modal-full-width">
+                                    <label for="escala-role">Role</label>
+                                    <select id="escala-role" required>
+                                    </select>
+                                </div>
+
+                                <div class="form-group modal-full-width">
+                                    <label for="escala-usuario-input">Usuário</label>
+                                    <input type="text" id="escala-usuario-input" list="lista-usuarios"
+                                        placeholder="Digite para buscar..." required autocomplete="off">
+                                    <datalist id="lista-usuarios">
+                                    </datalist>
+                                    <input type="hidden" id="escala-id-usuario">
+                                </div>
+
+                                <div class="form-group modal-full-width">
+                                    <label>Duração do Plantão</label>
+                                    <div class="date-range-group">
+                                        <input type="datetime-local" id="escala-inicio" class="input-date-responsive"
+                                            required>
+                                        <span>até</span>
+                                        <input type="datetime-local" id="escala-fim" class="input-date-responsive"
+                                            required>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn-cancel" id="btn-cancel-escala">Cancelar</button>
+                                    <button type="submit" class="btn-confirm">Confirmar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="modal-delete-escala" class="modal-overlay" style="display: none;">
+                    <div class="modal-card modal-confirm-card">
+                        <div class="modal-confirm-body">
+                            <h3 class="modal-confirm-title">
+                                Remover Plantonista
+                            </h3>
+                            <p class="modal-confirm-text">
+                                Tem certeza que deseja remover este registro da escala?
+                            </p>
+                            <div class="modal-confirm-actions">
+                                <button type="button" class="btn-cancel btn-modal-action" id="btn-del-escala-fechar">
+                                    Cancelar
+                                </button>
+                                <button type="button" class="btn-confirm btn-modal-action"
+                                    id="btn-del-escala-confirmar">
+                                    Confirmar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
+
+
             <div id="view-usuarios" class="view" style="display: none;">
                 <!-- Filtros de Pesquisa e Perfil -->
                 <section class="filter-container card filter-row">
@@ -457,7 +545,6 @@
                         <img src="./assets/magnifying-glass.svg" alt="Buscar" class="search-icon">
                     </div>
 
-                    <!-- Removido o ADM apenas gerencia, para criar um usuário é só realizar o cadastro -->
                 </section>
 
                 <!-- Tabela de Usuários -->
@@ -482,7 +569,7 @@
 
                 <!-- Modais de Usuário -->
 
-                <!-- Modal de Configuração/Edição de Usuário (RF03) -->
+                <!-- Modal de Configuração/Edição de Usuário -->
                 <div id="modal-usuario-config" class="modal-overlay" style="display: none;">
                     <div class="modal-card modal-regra-card"> <!-- Reutilizando estilo do modal-regra-card -->
                         <div class="modal-header">
@@ -524,7 +611,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- COLUNA DIREITA: Configurações de Notificação (RF04) -->
+                                    <!-- COLUNA DIREITA: Configurações de Notificação -->
                                     <div class="col-sql">
                                         <div class="form-group modal-full-width">
                                             <label>Canais de Notificação</label>
@@ -537,7 +624,6 @@
                                                 usuário.</small>
                                         </div>
 
-                                        <!-- Implementação futura: Adicionar lógica para adicionar/remover canais -->
                                     </div>
                                 </div>
 

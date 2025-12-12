@@ -1,4 +1,4 @@
-# src/scheduler/orchestrator.py
+# src/scheduler/orquestrador.py
 # flake8: noqa
 # type: ignore
 
@@ -44,7 +44,7 @@ def verificar_regras():
     finally:
         conn.close()
 
-schedule.every(1).minute.do(processar_escalonamentos)
+schedule.every(1).minutes.do(processar_escalonamentos)
 schedule.every(1).minutes.do(verificar_regras)
 print(f"Orquestrador Python Inicializado (Schema: {DB_SCHEMA})...")
 

@@ -23,7 +23,7 @@ output_dir = root_dir / 'public' / 'relatorios'
 output_file = output_dir / 'analise_performance.png'
 os.makedirs(output_dir, exist_ok=True)
 
-DB_SCHEMA = os.getenv("DB_SCHEMA", "public")
+DB_SCHEMA = os.getenv("DB_SCHEMA", "qq_monitor")
 
 
 def gerar_graficos():

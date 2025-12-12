@@ -13,7 +13,7 @@ router.use(checkAuth);
 
 // GET /usuarios (Admin pode listar todos)
 router.get("/", 
-    checkPermission(R_USUARIOS, P_ADMIN), // Requer recurso TELA_USUARIOS e perfil ADMIN
+    checkPermission(R_USUARIOS, P_ADMIN), 
     UsuariosController.getUsuarios
 );
 
@@ -33,6 +33,11 @@ router.get("/:id/detalhes",
 router.put("/:id/configuracao", 
     checkPermission(R_USUARIOS, P_ADMIN), 
     UsuariosController.updateUsuarioConfiguracao
+);
+// PUT /usuarios/eu/perfil (Usuário atualiza os próprios dados)
+router.put("/eu/perfil", 
+    checkPermission(R_NENHUM, P_TODOS), // Aberto a todos os logados
+    UsuariosController.updateMeuPerfil
 );
 
 // DELETE /usuarios/:id (Admin pode excluir)

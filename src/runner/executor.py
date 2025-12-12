@@ -15,7 +15,7 @@ from db import get_db_connection, DB_SCHEMA
 
 IDLE_TIME_SEC = 5
 
-# --- HELPERS UTILITÁRIOS ---
+# HELPERS UTILITÁRIOS
 
 class DateEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -66,7 +66,7 @@ def notificar_webhook_dashboard(msg, tipo="INFO", id_incidente=None):
     except Exception as e:
         print(f"    Erro Webhook: {e}")
 
-# --- FUNÇÕES DE NEGÓCIO ---
+# FUNÇÕES DE NEGÓCIO
 
 def reservar_job(conn):
     cur = conn.cursor()

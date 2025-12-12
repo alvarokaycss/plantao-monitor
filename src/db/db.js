@@ -18,7 +18,6 @@ const pool = new Pool({
 
 /**
  * Configurações básicas e de verificação de variáveis ambiente
- * (Mantido aqui para garantir que a conexão não inicie sem as variáveis)
  */
 if (!SCHEMA) {
     console.error("ERRO: variável DB_SCHEMA não definida ou está vazia. Verifique seu arquivo .env.");

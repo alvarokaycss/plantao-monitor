@@ -31,7 +31,7 @@ exports.registerUser = async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Inserir Usuário (Padrão: ATIVO = FALSE)
+        // Inserir Usuário (Padrão: ATIVO = FALSE)
         const insertUserQuery = `
             INSERT INTO ${SCHEMA}.usuario (uid_firebase, id_perfil, email, nome, ativo)
             VALUES ($1, 3, $2, $3, FALSE) -- 3 = Viewer, Ativo = FALSE
@@ -41,8 +41,7 @@ exports.registerUser = async (req, res) => {
         const userRes = await client.query(insertUserQuery, [uid, email, nomeUsuario]);
         const newUser = userRes.rows[0];
 
-        // 2. Configuração Inicial de Email (Movido do Middleware para cá)
-        // Isso atende sua solicitação de remover a automação do middleware
+        // Configuração Inicial de Email (Movido do Middleware para cá)
         const canalEmailQuery = `SELECT id_tipo_canal FROM ${SCHEMA}.tipos_canal_notificacao WHERE nome ILIKE 'Email'`;
         const canalRes = await client.query(canalEmailQuery);
 
@@ -79,12 +78,22 @@ exports.registerUser = async (req, res) => {
  */
 exports.getUsuarios = async (req, res) => {
     try {
-        const { id_perfil, pesquisa } = req.query;
-        const data = await UsuariosService.selectUsuariosFiltrados({ id_perfil, pesquisa });
-        res.json(data);
+        // Captura o query param ?ativo=true ou ?ativo=false
+        const { ativo } = req.query;
+        
+        const filtros = {};
+        
+        // Converte string 'true'/'false' para boolean real
+        if (ativo !== undefined) {
+            filtros.ativo = (ativo === 'true');
+        }
+
+        const usuarios = await UsuariosService.getAllUsuarios(filtros);
+        return res.json(usuarios);
+
     } catch (error) {
-        console.error("ERROR getUsuarios:", error);
-        res.status(500).json({ error: "Erro ao buscar usuarios" });
+        console.error("Erro ao buscar usuários:", error);
+        return res.status(500).json({ error: "Erro interno ao listar usuários." });
     }
 };
 
@@ -137,10 +146,9 @@ exports.getUsuarioDetalhes = async (req, res) => {
     }
 };
 
-
 /**
  * PUT /usuarios/:id/configuracao
- * Atualiza o perfil, status e permissões de um usuário. (Admin - RF03)
+ * Atualiza o perfil, status e permissões de um usuário.
  */
 exports.updateUsuarioConfiguracao = async (req, res) => {
     const idUsuarioParaConfigurar = asInteger(req.params.id);
@@ -181,6 +189,33 @@ exports.updateUsuarioConfiguracao = async (req, res) => {
         }
         console.error(`Erro ao configurar usuário ${idUsuarioParaConfigurar}:`, err);
         return res.status(500).json({ error: "Erro interno ao configurar usuário" });
+    }
+};
+
+/**
+ * PUT /usuarios/eu/perfil
+ * Permite que o usuário edite seus próprios dados (Nome, Celular, Preferências).
+ */
+exports.updateMeuPerfil = async (req, res) => {
+    const idUsuario = req.user.id_usuario; 
+    // Extrai novos campos do body
+    const { nome, celular, notificacoes, janela_inicio, janela_fim } = req.body;
+
+    try {
+        const dadosAtualizacao = {
+            nome: nome ? String(nome).trim() : undefined,
+            celular: celular ? String(celular).trim() : undefined,
+            notificacoes: notificacoes || {},
+            janela_inicio: janela_inicio || null,
+            janela_fim: janela_fim || null
+        };
+
+        await UsuariosService.updateMeuPerfil(idUsuario, dadosAtualizacao);
+        res.json({ message: "Perfil atualizado com sucesso." });
+
+    } catch (error) {
+        console.error("Erro updateMeuPerfil:", error);
+        res.status(500).json({ error: "Erro ao atualizar perfil." });
     }
 };
 

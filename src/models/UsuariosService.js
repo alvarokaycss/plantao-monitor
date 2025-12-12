@@ -53,7 +53,6 @@ exports.selectUsuariosFiltrados = async (filtros = {}) => {
 exports.getUsuarioDetalhes = async (idUsuarioVal) => {
     const client = await pool.connect();
     try {
-        // Query 1: Buscar a informação principal do usuário
         const userQuery = `
             SELECT 
                 u.id_usuario, u.email, u.nome, 
@@ -66,11 +65,10 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
         const userRes = await client.query(userQuery, [idUsuarioVal]);
 
         if (userRes.rows.length === 0) {
-            return null; // Usuário não encontrado
+            return null;
         }
         const usuario = userRes.rows[0];
 
-        // Query 2: Buscar as configurações de notificação (canais)
         const configQuery = `
             SELECT 
                 c.id_configuracao_notificacao, 
@@ -86,7 +84,6 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
         `;
         const configRes = await client.query(configQuery, [idUsuarioVal]);
 
-        // Query 3: Buscar os recursos associados (toggles de tela)
         const recursosQuery = `
             SELECT 
                 ur.id_recurso,
@@ -102,7 +99,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
         return {
             info: usuario,
             configuracoes: configRes.rows,
-            recursos: recursosRes.rows // RETORNA OS RECURSOS AQUI!
+            recursos: recursosRes.rows
         };
 
     } finally {
@@ -123,7 +120,6 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
     try {
         await client.query('BEGIN');
 
-        // Atualizar a tabela 'usuario' (perfil e status ativo)
         const updateUsuarioQuery = `
             UPDATE ${SCHEMA}.usuario 
             SET 
@@ -138,7 +134,6 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
             throw new Error("Usuário não encontrado para configurar.");
         }
 
-        // Atualizar 'usuario_recursos' (M:N) (Toggles)
         await client.query(`DELETE FROM ${SCHEMA}.usuario_recursos WHERE id_usuario = $1`, [idUsuarioParaConfigurar]);
 
         if (recursosVal.length > 0) {
@@ -147,12 +142,9 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
             await client.query(insertRecursosQuery, [idUsuarioParaConfigurar, ...recursosVal]);
         }
 
-
-        // Atualizar 'configuracoes_notificacao' (1:N) (Canais)
         await client.query(`DELETE FROM ${SCHEMA}.configuracoes_notificacao WHERE id_usuario = $1`, [idUsuarioParaConfigurar]);
 
         if (notificacoesVal.length > 0) {
-            // multiplicador deve ser 4, pois inserimos 4 campos dinâmicos por linha (Tipo, Endereço, Habilitado, Dispositivo)
             const insertNotificacoesQuery = 'INSERT INTO ' + `${SCHEMA}.configuracoes_notificacao` +
                 ' (id_usuario, id_tipo_canal, endereco_notificacao, habilitado, nome_dispositivo) VALUES ' +
                 notificacoesVal.map((n, i) =>
@@ -194,16 +186,12 @@ exports.deleteUsuario = async (idUsuarioVal) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Remove associações com Recursos (M:N)
         await client.query(`DELETE FROM ${SCHEMA}.usuario_recursos WHERE id_usuario = $1`, [idUsuarioVal]);
 
-        // 2. Remove configurações de notificação (1:N)
         await client.query(`DELETE FROM ${SCHEMA}.configuracoes_notificacao WHERE id_usuario = $1`, [idUsuarioVal]);
 
-        // 3. Remove escalas do usuário
         await client.query(`DELETE FROM ${SCHEMA}.escala WHERE id_usuario = $1`, [idUsuarioVal]);
 
-        // 4. Tenta excluir o usuário
         const query = `DELETE FROM ${SCHEMA}.usuario WHERE id_usuario = $1 RETURNING id_usuario`;
         const { rowCount } = await client.query(query, [idUsuarioVal]);
 
@@ -217,7 +205,6 @@ exports.deleteUsuario = async (idUsuarioVal) => {
     } catch (error) {
         await client.query('ROLLBACK');
 
-        // Trata erro de chave estrangeira (usuário referenciado em incidentes ou regras)
         if (error.code === '23503') {
             throw new Error('Não é possível excluir o usuário: ele possui registros vinculados em incidentes ou regras.');
         }
@@ -225,5 +212,104 @@ exports.deleteUsuario = async (idUsuarioVal) => {
         throw error;
     } finally {
         if (client) client.release();
+    }
+};
+
+exports.getAllUsuarios = async (filtros = {}) => {
+    const client = await pool.connect();
+    try {
+        let query = `
+            SELECT id_usuario, nome, email, id_perfil, ativo, data_criacao
+            FROM ${SCHEMA}.usuario
+        `;
+        
+        const conditions = [];
+        const values = [];
+
+        // Se o filtro 'ativo' foi passado, adiciona ao WHERE
+        if (filtros.ativo !== undefined) {
+            values.push(filtros.ativo); // $1
+            conditions.push(`ativo = $${values.length}`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY nome ASC;';
+
+        const { rows } = await client.query(query, values);
+        return rows;
+
+    } finally {
+        client.release();
+    }
+};
+
+// src/models/UsuariosService.js
+
+exports.updateMeuPerfil = async (idUsuario, dados) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        let updateQuery = `UPDATE ${SCHEMA}.usuario SET `;
+        const updateValues = [];
+        let idx = 1;
+
+        if (dados.nome !== undefined) {
+            updateQuery += `nome = $${idx}, `;
+            updateValues.push(dados.nome);
+            idx++;
+        }
+        
+        // Atualiza horários
+        updateQuery += `notificacao_janela_inicio = $${idx}, notificacao_janela_fim = $${idx+1} `;
+        updateValues.push(dados.janela_inicio, dados.janela_fim);
+        idx += 2;
+
+        updateQuery += `WHERE id_usuario = $${idx}`;
+        updateValues.push(idUsuario);
+
+        await client.query(updateQuery, updateValues);
+
+        //  Atualiza WhatsApp
+        if (dados.celular) {
+            const check = await client.query(
+                `SELECT id_configuracao_notificacao FROM ${SCHEMA}.configuracoes_notificacao WHERE id_usuario = $1 AND id_tipo_canal = 3`,
+                [idUsuario]
+            );
+            
+            if (check.rows.length > 0) {
+                await client.query(
+                    `UPDATE ${SCHEMA}.configuracoes_notificacao SET endereco_notificacao = $1 WHERE id_configuracao_notificacao = $2`,
+                    [dados.celular, check.rows[0].id_configuracao_notificacao]
+                );
+            } else {
+                await client.query(
+                    `INSERT INTO ${SCHEMA}.configuracoes_notificacao (id_usuario, id_tipo_canal, endereco_notificacao, habilitado, nome_dispositivo) VALUES ($1, 3, $2, TRUE, 'Celular Pessoal')`,
+                    [idUsuario, dados.celular]
+                );
+            }
+        }
+
+        // Atualiza Toggles
+        const mapCanais = { push: 1, email: 2, whatsapp: 3 };
+        for (const [key, enabled] of Object.entries(dados.notificacoes)) {
+            const idTipo = mapCanais[key];
+            if (idTipo) {
+                await client.query(
+                    `UPDATE ${SCHEMA}.configuracoes_notificacao SET habilitado = $1 WHERE id_usuario = $2 AND id_tipo_canal = $3`,
+                    [enabled, idUsuario, idTipo]
+                );
+            }
+        }
+
+        await client.query('COMMIT');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
     }
 };

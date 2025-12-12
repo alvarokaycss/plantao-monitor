@@ -15,70 +15,69 @@ import { initRegrasController, loadRegrasView } from './controllers/regras.contr
 import { initUsuariosController, loadUsuariosView } from './controllers/usuarios.controller.js';
 import { initAnalyticsController } from "./controllers/analytics.controller.js";
 import { initEscalasController, loadEscalasView } from './controllers/escalas.controller.js';
+import { initPerfilController, loadPerfilView } from './controllers/perfil.controller.js';
 
-// --- CONFIGURAÇÃO DE PERMISSÕES ---
-// Mapeia o nome da view (data-view) para a chave do recurso exigido no banco
+// CONFIGURAÇÃO DE PERMISSÕES
 const VIEW_PERMISSIONS = {
-    'incidentes': null,       // Acesso livre (apenas login)
-    'perfil': null,           // Acesso livre
+    'incidentes': null,
+    'perfil': null,
     'regras': 'TELA_REGRAS',
     'escalas': 'TELA_ESCALAS',
     'usuarios': 'TELA_USUARIOS'
 };
 
-// Armazena os recursos do usuário logado
 let currentUserResources = [];
 
-// --- Navegação (SPA) com Bloqueio ---
+// Navegação (SPA) com Bloqueio
 async function navigateTo(viewName) {
-    // 1. Verifica Permissão antes de navegar
+    // Verifica Permissão antes de navegar
     const requiredResource = VIEW_PERMISSIONS[viewName];
     
-    // Se a tela exige um recurso E o usuário NÃO tem esse recurso na lista...
+
     if (requiredResource && !currentUserResources.includes(requiredResource)) {
         showMessage(`Acesso negado: Você não tem permissão para acessar ${viewName}.`, 'error');
-        return; // Bloqueia a navegação
+        return;
     }
 
-    // 2. Atualiza Navbar (Visual ativo)
+    // Atualiza Navbar
     ui.navLinks.forEach(l => l.classList.toggle('active', l.dataset.view === viewName));
     
-    // 3. Troca a View (Display block/none)
+    //Troca a View (Display block/none)
     ui.views.forEach(v => v.style.display = 'none');
     const active = document.getElementById(`view-${viewName}`);
     if (active) active.style.display = 'block';
 
-    // 4. Carrega Dados Específicos da View
+    // Carrega Dados Específicos da View
     try {
         if (viewName === 'incidentes') await loadIncidentesView();
         if (viewName === 'regras') await loadRegrasView();
         if (viewName === 'usuarios') await loadUsuariosView();
         if (viewName === 'escalas') await loadEscalasView();
-        // Adicione aqui para escalas futuramente
+        if (viewName === 'perfil') await loadPerfilView();
     } catch (e) { 
         console.error("Erro ao navegar:", e); 
     }
 }
 
-// --- Função para Atualizar a Navbar (Esconder Links) ---
+// Função para Atualizar a Navbar (Esconder Links)
 function updateNavbarVisibility() {
     ui.navLinks.forEach(link => {
         const view = link.dataset.view;
-        // Se não tem data-view (ex: botão perfil ou logout), ignora
+        // Se não tem data-view ignora
         if (!view) return;
 
         const requiredResource = VIEW_PERMISSIONS[view];
 
-        // Se exige recurso e usuário não tem -> Esconde (display: none)
+        // Se exige recurso e usuário não tem --> Esconde
         if (requiredResource && !currentUserResources.includes(requiredResource)) {
             link.style.display = 'none';
         } else {
-            link.style.display = ''; // Reseta para o padrão (block/inline)
+            link.style.display = '';
         }
     });
 }
 
-// --- WebSocket Setup ---
+// WebSocket Setup
 
 let globalSocket = null;
 
@@ -109,19 +108,20 @@ function setupWebSocket() {
     });
 }
 
-// --- Inicialização ---
+// Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Plantão Monitor iniciando...');
 
-    // 1. Inicializa Controllers
+    // Inicializa Controllers
     initAuthController();
     initIncidentesController();
     initRegrasController();
     initUsuariosController();
     initAnalyticsController();
     initEscalasController();
+    initPerfilController();
 
-    // 2. Configura Listener de Navegação
+    // Configura Listener de Navegação
     ui.navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -130,25 +130,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 3. Inicializa Auth (Gerencia estado Login/App)
+    // Inicializa Auth (Gerencia estado Login/App)
     initAuth(async (user) => {
         if (user) {
             ui.loginStatus.textContent = 'Verificando permissões...';
             
             try {
-                // Tenta buscar detalhes do usuário E suas permissões (recursos)
-                // Esta rota é acessível a todos (R_NENHUM)
                 const userDetails = await fetchApi('/usuarios/eu/detalhes');
                 
                 // Processa a lista de recursos
                 if (userDetails.recursos) {
-                    // Transforma objetos {chave_recurso: '...'} em array de strings
                     currentUserResources = userDetails.recursos.map(r => r.chave_recurso);
                 } else {
                     currentUserResources = [];
                 }
 
-                // === LOGIN SUCESSO: Usuário Ativo e Validado ===
+                // LOGIN SUCESSO: Usuário Ativo e Validado 
                 ui.loginStatus.textContent = 'Autenticado.';
                 if (user.displayName && ui.profileButton) {
                     const iniciais = user.displayName.split(' ').map(n => n[0]).join('').substring(0, 2);
@@ -169,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setupWebSocket();
 
             } catch (error) {
-                // === TRATAMENTO DE ERROS DE NEGÓCIO (Fluxo Seguro) ===
+                // TRATAMENTO DE ERROS DE NEGÓCIO
                 
                 // CASO A: Usuário não existe no banco -> Faz Auto-Cadastro
                 if (error.code === 'USER_NOT_FOUND_IN_DB') {

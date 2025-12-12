@@ -12,7 +12,7 @@ def processar_escalonamentos():
     try:
         cur = conn.cursor()
         
-        # 1. BUSCA INCIDENTES PENDENTES DE ESCALONAMENTO
+        # BUSCA INCIDENTES PENDENTES DE ESCALONAMENTO
         query = f"""
             SELECT 
                 i.id_incidente,
@@ -57,7 +57,7 @@ def processar_escalonamentos():
 
             print(f"   >>> Escalando Incidente #{id_incidente} (Nível {nivel_atual} -> {nivel_atual + 1}) para Role: {role_nome}")
 
-            # 2. BUSCA PLANTONISTAS (COM VALIDAÇÃO DE JANELA DE HORÁRIO)
+            # BUSCA PLANTONISTAS (COM VALIDAÇÃO DE JANELA DE HORÁRIO)
             query_plantonistas = f"""
                 SELECT DISTINCT u.email, u.nome
                 FROM {DB_SCHEMA}.escala e
@@ -92,7 +92,7 @@ def processar_escalonamentos():
                 print(f"   !!! Ninguém de plantão disponível na Role {role_nome}. Escalonamento adiado.")
                 continue 
 
-            # 3. ENVIA NOTIFICAÇÕES
+            # ENVIA NOTIFICAÇÕES
             enviados = 0
             for plantonista in plantonistas:
                 email = plantonista['email']
@@ -112,7 +112,7 @@ def processar_escalonamentos():
                         VALUES (%s, (SELECT id_usuario FROM {DB_SCHEMA}.usuario WHERE email=%s), 2, 'ENVIADO', %s, 'ESCALONAMENTO', NULL)
                     """, (id_incidente, email, email))
 
-            # 4. ATUALIZA NÍVEL
+            # ATUALIZA NÍVEL
             if enviados > 0:
                 cur.execute(f"""
                     UPDATE {DB_SCHEMA}.incidente

@@ -179,7 +179,7 @@ async function handleEscalaSubmit(e) {
         }
 
         document.getElementById('modal-escala').style.display = 'none';
-        loadEscalasView(); // Recarrega a tela
+        loadEscalasView();
 
     } catch (e) {
         showMessage(e.message, "error");

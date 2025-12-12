@@ -1,6 +1,5 @@
 // public/js/views/base.view.js
 
-// Exportamos um objeto com getters para garantir que o DOM já carregou quando acessarmos
 export const ui = {
     // Login
     loginView: document.getElementById('login-view'),
@@ -70,7 +69,7 @@ export const ui = {
         tbody: document.getElementById('regras-list-body'),
         filterPrioridade: document.getElementById('regras-filter-prioridade'),
         search: document.getElementById('regras-search'),
-        modal: document.getElementById('modal-acoes'), // Modal Ações
+        modal: document.getElementById('modal-acoes'),
         formAcoes: document.getElementById('form-acoes'),
         btnCancelAcao: document.getElementById('btn-cancel-acao'),
         
@@ -132,5 +131,10 @@ export const ui = {
             btnCancel: document.getElementById('btn-close-modal-fechar'),
             btnConfirm: document.getElementById('btn-close-modal-confirmar')
         }
+    },
+
+    perfil: {
+        view: document.getElementById('view-perfil'),
+        container: document.getElementById('perfil-container'),
     }
 };

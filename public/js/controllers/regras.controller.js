@@ -125,8 +125,6 @@ async function openRegraModal(modeOrId) {
             // Preenche Roles (Notificação Inicial)
             let rolesIds = [];
             // Tenta pegar do cache da lista ou usa o que veio do detalhes se disponível
-            // A API de detalhes não retorna roles em array simples na view atual, 
-            // mas o selectRegrasFiltradas retorna. Vamos confiar no cache da lista.
             const regraLista = regrasCache.find(r => r.id_regra == idRegra);
             if (regraLista && regraLista.roles_id) rolesIds = regraLista.roles_id;
             
@@ -232,7 +230,7 @@ async function handleRegraSubmit(e) {
         qnt_erro_max: Number(ui.regras.campoErros.value),
         prioridade: Number(ui.regras.campoPrioridade.value),
         roles: roles,
-        escalonamento: escalonamento, // <--- Enviando array para o backend
+        escalonamento: escalonamento,
         descricao: ui.regras.campoDescricao.value,
         janela_inicio: ui.regras.campoJanelaInicio.value,
         janela_fim: ui.regras.campoJanelaFim.value

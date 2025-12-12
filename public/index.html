@@ -8,9 +8,8 @@
     <link rel="stylesheet" href="style.css">
 
     <!-- Carrega o App e o Auth (necessários para login) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <!-- Configuração para o navegador ouvir o evento de dashboard update -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 
@@ -77,8 +76,6 @@
                 <button class="profile-button" data-view="perfil" aria-label="Ver perfil">
                     ÁK
                 </button>
-                <!-- Botão de Logout, estilizar melhor depois-->
-                <button id="logout-btn" class="btn-logout" title="Sair">Sair</button>
             </div>
         </header>
 
@@ -88,7 +85,6 @@
             <!-- Mensagens de Erro/Sucesso (Aria-live para acessibilidade) -->
             <div id="message-area" class="message-area" aria-live="polite"></div>
 
-            <!-- ============================================== -->
             <div id="view-incidentes" class="view">
                 <!-- 1. KPIs -->
                 <section class="kpi-container">
@@ -666,11 +662,20 @@
             </div>
 
             <div id="modal-regra" class="modal-overlay" style="display: none;">
+            </div>
 
-                <div id="view-perfil" class="view" style="display: none;">
-                    <h2>Perfil do Usuário</h2>
+            <div id="view-perfil" class="view" style="display: none;">
+                <section class="panel-header card" style="margin-bottom: 20px;">
+                    <div class="panel-header-title">
+                        <h2>Meu Perfil</h2>
+                    </div>
+                </section>
+
+                <div id="perfil-container">
+                    <div class="loading-placeholder">Carregando perfil...</div>
                 </div>
             </div>
+            
         </main>
 
     </div>

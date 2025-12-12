@@ -20,7 +20,7 @@ router.get("/:id/detalhes",
 
 // Rotas de Manipulação (Admin e Operator podem criar/editar)
 router.post("/", 
-    checkPermission(R_REGRAS, P_ADMIN_OP), // Assume que Operator também pode criar
+    checkPermission(R_REGRAS, P_ADMIN_OP),
     RegrasController.createRegra
 );
 router.put("/:id", 

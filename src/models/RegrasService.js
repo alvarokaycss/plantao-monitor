@@ -152,7 +152,7 @@ exports.createRegra = async (payload, idUsuarioCriadorVal) => {
             await client.query(insertRolesQuery, [newRegraId, ...rolesVal]);
         }
 
-        // 3. (NOVO) Inserir Escalonamento
+        // 3. Inserir Escalonamento
         if (escalonamentoVal && escalonamentoVal.length > 0) {
             // Espera payload: [{ minutos: 15, role: 2, canal: 1 }, ...]
             const insertEscQuery = `

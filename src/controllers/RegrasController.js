@@ -171,6 +171,11 @@ exports.updateRegra = async (req, res) => {
         })).filter(e => e.minutos !== null && e.role !== null && e.canal !== null);
     }
 
+    const sqlLimpo = String(consulta_sql).trim().toUpperCase();
+    if (/(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)/.test(sqlLimpo)) {
+        return res.status(400).json({ error: "Segurança: Comandos DML/DDL não são permitidos nesta regra." });
+    }
+
     // 2. Normalização
     const idBancoVal = asInteger(id_banco_dados);
     const intervaloVal = asInteger(intervalo_minutos);

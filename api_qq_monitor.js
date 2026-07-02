@@ -129,7 +129,11 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 8000;
 
-server.listen(PORT, () => {
-    logger.info(`API + WebSocket rodando em http://localhost:${PORT}`);
-    logger.info(`Seguranca (Helmet) e Logging (Pino) ativos.`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    server.listen(PORT, () => {
+        logger.info(`API + WebSocket rodando em http://localhost:${PORT}`);
+        logger.info(`Seguranca (Helmet) e Logging (Pino) ativos.`);
+    });
+}
+
+module.exports = { app, server };

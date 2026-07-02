@@ -12,3 +12,6 @@ google-credentials.json
 # Logs
 npm-debug.log
 yarn-debug
+
+# Graphify
+graphify-out/

@@ -18,13 +18,14 @@ Esta skill garante a consistência técnica, a documentação acadêmica e o con
   * Solicitar ao usuário a atualização do arquivo correspondente na pasta `docs/` (`docs/arquitetura.md` ou `docs/banco_de_dados.md`).
   * Apresentar o rascunho da documentação antes de salvá-la para aprovação do usuário.
 
-### 2. Atualização do Graphify
+### 2. Atualização do Graphify e Notion
 * Após alterações significativas na estrutura de diretórios ou na assinatura das funções/módulos do sistema:
-  * Lembre o usuário de rodar o comando de atualização do grafo:
+  * Rodar o comando de atualização do grafo:
     `& "C:\Users\kaycs\AppData\Roaming\Python\Python313\Scripts\graphify.exe" .`
   * E o comando de agrupamento:
     `& "C:\Users\kaycs\AppData\Roaming\Python\Python313\Scripts\graphify.exe" cluster-only C:\Users\kaycs\Dev\API_plantao_monitor`
-  * Isso garante que a IA sempre tenha a visão atualizada da arquitetura sem consumir contexto desnecessário.
+* **Ao concluir marcos relevantes (Milestones/Issues grandes):**
+  * Atualizar a página de acompanhamento do TCC no Notion (`📘 TCC Monografia — Registro de Evolução & Metodologia`) via MCP com o resumo dos avanços, decisões de arquitetura e estado atual do ecossistema.
 
 ### 3. Aprendizado Contextual (TypeScript & React)
 * **Antes de iniciar a escrita de código para migração para TypeScript:**

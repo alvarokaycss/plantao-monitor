@@ -1,0 +1,13 @@
+node_modules/
+.venv/
+.git/
+.github/
+.agents/
+.mypy_cache/
+graphify-out/
+tests/
+Dockerfile*
+docker-compose*
+.env
+npm-debug.log
+yarn-debug

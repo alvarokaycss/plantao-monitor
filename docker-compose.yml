@@ -1,0 +1,75 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: db-plantao-monitor
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: alvaro22
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - plantao-network
+
+  api:
+    build: .
+    container_name: api-plantao-monitor
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:alvaro22@db:5432/postgres
+      DB_SCHEMA: qq_monitor
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - plantao-network
+
+  orquestrador:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    container_name: orquestrador-plantao-monitor
+    command: python src/runner/orquestrador.py
+    environment:
+      DATABASE_URL: postgresql://postgres:alvaro22@db:5432/postgres
+      DB_SCHEMA: qq_monitor
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - plantao-network
+
+  executor:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    container_name: executor-plantao-monitor
+    command: python src/runner/executor.py
+    environment:
+      DATABASE_URL: postgresql://postgres:alvaro22@db:5432/postgres
+      DB_SCHEMA: qq_monitor
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - plantao-network
+
+volumes:
+  pgdata:
+
+networks:
+  plantao-network:
+    driver: bridge

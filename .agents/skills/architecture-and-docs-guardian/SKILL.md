@@ -25,7 +25,7 @@ Esta skill garante a consistência técnica, a documentação acadêmica e o con
   * E o comando de agrupamento:
     `& "C:\Users\kaycs\AppData\Roaming\Python\Python313\Scripts\graphify.exe" cluster-only C:\Users\kaycs\Dev\API_plantao_monitor`
 * **Ao concluir marcos relevantes (Milestones/Issues grandes ou sub-tarefas chave):**
-  * Atualizar a página oficial do TCC no Notion (`TCC - Projeto`) via MCP.
+  * Atualizar a subpágina oficial do TCC no Notion (`TCC - Projeto` ➡️ `📘 Relatório de Evolução & Decisões da Monografia`) via MCP.
   * Respeitar a estrutura modular de seções da Monografia:
     - **Seção 1.1:** Arquitetura de Permissões & Modelo de Usuários (Regras de negócio, AuthN/AuthZ, `nome_dispositivo`).
     - **Seção 1.2:** Engenharia do Backend & Otimização de Pool.

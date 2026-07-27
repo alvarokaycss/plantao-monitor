@@ -10,6 +10,11 @@ Este quadro acompanha a evolução do seu TCC e a modernização do projeto **Pl
 - [ ] Migração do Backend Express para TypeScript (Issue #2)
 
 ## 🔄 Em Progresso (Doing)
+- [/] Migração do Backend Express para TypeScript (Issue #2)
+  - [x] Sub-tarefa 2.1: Infraestrutura TypeScript (`tsconfig.json`, `package.json`)
+  - [x] Sub-tarefa 2.2: Interfaces de Domínio (`src/types/user.ts`, `express.d.ts`)
+  - [x] Sub-tarefa 2.3: Conexão PostgreSQL em TypeScript (`src/db/db.ts`)
+  - [/] Sub-tarefa 2.4: Middleware de Autenticação (`src/middleware/authMiddleware.ts`)
 
 ## Done ✅
 - [x] Organização e Escrita da Documentação de Arquitetura Inicial (Issue #1)
@@ -17,6 +22,7 @@ Este quadro acompanha a evolução do seu TCC e a modernização do projeto **Pl
   - [x] Escrever `docs/arquitetura.md` (Visão geral, componentes e fluxo de webhook/websocket)
   - [x] Escrever `docs/banco_de_dados.md` (Modelagem física, tabelas, schemas e queries do runner)
   - [x] Atualizar o Knowledge Graph rodando o Graphify
+- [x] Setup completo de Docker Compose e Banco PostgreSQL (Porta 5433)
 - [x] Copiar as skills do Superpowers para o diretório `.agents/skills` do projeto
 - [x] Mover o projeto legado para a pasta unificada `C:\Users\kaycs\Dev\API_plantao_monitor`
 - [x] Criar estrutura de testes de integração para as rotas do Express (usando Jest/Supertest)

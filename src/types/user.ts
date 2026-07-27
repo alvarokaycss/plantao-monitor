@@ -20,14 +20,21 @@ export interface IRegisterUserDTO {
 }
 
 /**
+ * Estrutura de cada item de notificação configurado para um usuário
+ */
+export interface INotificacaoItemDTO {
+    id_tipo_canal: number;
+    endereco_notificacao: string;
+    habilitado?: boolean;
+    nome_dispositivo?: string;
+}
+
+/**
  * DTO para atualização das configurações do usuário pelo Admin (PUT /usuarios/:id/configuracao)
  */
 export interface IUpdateUsuarioConfigDTO {
     id_perfil: number;
     ativo?: boolean;
     recursos?: number[];
-    notificacoes?: Array<{
-        id_tipo_canal: number;
-        endereco_notificacao: string;
-    }>;
+    notificacoes?: INotificacaoItemDTO[];
 }

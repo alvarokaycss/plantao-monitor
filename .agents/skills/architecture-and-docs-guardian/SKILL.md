@@ -24,8 +24,14 @@ Esta skill garante a consistência técnica, a documentação acadêmica e o con
     `& "C:\Users\kaycs\AppData\Roaming\Python\Python313\Scripts\graphify.exe" .`
   * E o comando de agrupamento:
     `& "C:\Users\kaycs\AppData\Roaming\Python\Python313\Scripts\graphify.exe" cluster-only C:\Users\kaycs\Dev\API_plantao_monitor`
-* **Ao concluir marcos relevantes (Milestones/Issues grandes):**
-  * Atualizar a página de acompanhamento do TCC no Notion (`📘 TCC Monografia — Registro de Evolução & Metodologia`) via MCP com o resumo dos avanços, decisões de arquitetura e estado atual do ecossistema.
+* **Ao concluir marcos relevantes (Milestones/Issues grandes ou sub-tarefas chave):**
+  * Atualizar a página oficial do TCC no Notion (`TCC - Projeto`) via MCP.
+  * Respeitar a estrutura modular de seções da Monografia:
+    - **Seção 1.1:** Arquitetura de Permissões & Modelo de Usuários (Regras de negócio, AuthN/AuthZ, `nome_dispositivo`).
+    - **Seção 1.2:** Engenharia do Backend & Otimização de Pool.
+    - **Seção 1.3:** Infraestrutura Docker & Banco de Dados.
+    - **Seção 1.4:** Qualidade de Software, Testes & CI/CD.
+    - **Seção 1.5:** Grafo de Conhecimento (Graphify) & Skills.
 
 ### 3. Aprendizado Contextual (TypeScript & React)
 * **Antes de iniciar a escrita de código para migração para TypeScript:**

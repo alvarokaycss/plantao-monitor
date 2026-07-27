@@ -22,12 +22,13 @@ Esta skill coordena o fluxo organizacional do projeto **Plantão Monitor**, gara
   * **Dependências:** Se há outras tarefas que precisam acabar antes.
 * Vincule a Issue à Milestone correspondente no GitHub.
 
-### 3. Conclusão de Tarefas
+### 3. Conclusão de Tarefas & Sincronização
 * Após a verificação dos testes, instrua o usuário a commitar e dar push no código para o GitHub.
 * Lembre o usuário de:
   * Mover a Issue para **Done** (Concluído) no GitHub Projects.
   * Fechar a Issue correspondente.
   * Mover a tarefa para a seção `## Done ✅` do `task.md` local, marcando-a com `[x]`.
+  * Sincronizar os avanços na página do Notion `TCC - Projeto` inserindo o registro na seção modular correspondente (Seção 1.1 a 1.5).
 
 ### 4. Gestão de Milestones
 * Respeite a ordem lógica das Milestones acordadas no TCC:

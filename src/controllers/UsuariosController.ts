@@ -46,7 +46,8 @@ export const registerUser: RequestHandler<{}, any, IRegisterUserDTO> = async (re
         const insertUserQuery = `
             INSERT INTO ${SCHEMA}.usuario (uid_firebase, id_perfil, email, nome, ativo)
             VALUES ($1, 3, $2, $3, FALSE)
-            ON CONFLICT (uid_firebase) DO UPDATE SET email = EXCLUDED.email
+            ON CONFLICT (email) DO UPDATE SET 
+                uid_firebase = EXCLUDED.uid_firebase
             RETURNING id_usuario, ativo;
         `;
         const userRes = await client.query<{ id_usuario: number; ativo: boolean }>(insertUserQuery, [uid, email, nomeUsuario]);

@@ -14,6 +14,6 @@
     "resolveJsonModule": true,
     "moduleResolution": "node16"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "api_qq_monitor.js"],
   "exclude": ["node_modules", "dist", "tests"]
 }

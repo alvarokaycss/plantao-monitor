@@ -20,4 +20,4 @@ EXPOSE 8000
 ENV NODE_ENV=production
 
 # Start command with ts-node support for TypeScript modules
-CMD ["npx", "ts-node", "api_qq_monitor.js"]
+CMD ["npx", "ts-node", "--files", "api_qq_monitor.js"]

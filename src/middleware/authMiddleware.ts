@@ -73,7 +73,7 @@ export const checkAuth: RequestHandler = async (req: Request, res: Response, nex
         }
 
         // Sucesso: Anexa perfil tipado ao req.user
-        req.user = userProfile;
+        (req as any).user = userProfile;
         next();
 
     } catch (error) {
@@ -87,11 +87,12 @@ export const checkAuth: RequestHandler = async (req: Request, res: Response, nex
  */
 export const checkPermission = (recursoChave: string | null, perfisPermitidos: string[]): RequestHandler => {
     return (req: Request, res: Response, next: NextFunction): void | Response => {
-        if (!req.user) {
+        const user = (req as any).user as IUserProfile | undefined;
+        if (!user) {
             return res.status(401).json({ error: "Usuário não autenticado." });
         }
 
-        const { perfil_nome, recursos } = req.user;
+        const { perfil_nome, recursos } = user;
 
         // 1. Checagem de Visibilidade (Toggle)
         if (recursoChave && !recursos.includes(recursoChave)) {

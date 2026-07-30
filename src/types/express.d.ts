@@ -2,14 +2,18 @@
 
 import { IUserProfile } from '../models/user.model';
 
-/**
- * Extensão do namespace global do Express para incluir propriedades customizadas na requisição (req)
- */
 declare global {
     namespace Express {
         interface Request {
             user?: IUserProfile;
             io?: any;
         }
+    }
+}
+
+declare module 'express-serve-static-core' {
+    interface Request {
+        user?: IUserProfile;
+        io?: any;
     }
 }

@@ -1,4 +1,4 @@
-﻿CREATE SCHEMA IF NOT EXISTS qq_monitor;
+CREATE SCHEMA IF NOT EXISTS qq_monitor;
 SET search_path TO qq_monitor;
 -------------------
 -- Plantão Monitor
@@ -410,15 +410,11 @@ INSERT INTO recursos (chave_recurso, nome_amigavel) VALUES
 ON CONFLICT (chave_recurso) DO NOTHING;
 
 -- FIM DO SCRIPT
-UPDATE usuario 
-SET 
-    ativo = TRUE, 
-    id_perfil = 1  -- 1 = Admin
-WHERE email = 'seuemailaqui@gmail.com';
+INSERT INTO usuario (uid_firebase, id_perfil, email, nome, ativo) VALUES
+('seed_admin_uid', 1, 'admin@gmail.com', 'Administrador Principal', TRUE)
+ON CONFLICT (email) DO UPDATE SET ativo = TRUE, id_perfil = 1;
 
 INSERT INTO usuario_recursos (id_usuario, id_recurso)
-SELECT 
-    (SELECT id_usuario FROM usuario WHERE email = 'seuemailaqui@gmail.com'), -- Busca ID do seu usuário
-    id_recurso
+SELECT (SELECT id_usuario FROM usuario WHERE email = 'admin@gmail.com'), id_recurso
 FROM recursos
-ON CONFLICT (id_usuario, id_recurso) DO NOTHING; -- Evita erro se já tiver algum
+ON CONFLICT (id_usuario, id_recurso) DO NOTHING;

@@ -7,16 +7,18 @@ Este quadro acompanha a evolução do seu TCC e a modernização do projeto **Pl
 - [ ] Planejamento e Estruturação do novo Frontend em React (Issue #3)
 
 ## ⏳ A Fazer (To Do)
-- [ ] Migração do Backend Express para TypeScript (Issue #2)
+- [ ] Sub-tarefa 2.6: Migração do Módulo de Incidentes (`src/controllers/IncidentesController.ts`, `src/services/IncidentesService.ts`)
+- [ ] Sub-tarefa 2.7: Migração do Servidor Principal & WebSockets (`src/server.ts`)
 
 ## 🔄 Em Progresso (Doing)
 - [/] Migração do Backend Express para TypeScript (Issue #2)
-  - [x] Sub-tarefa 2.1: Infraestrutura TypeScript (`tsconfig.json`, `package.json`)
-  - [x] Sub-tarefa 2.2: Interfaces de Domínio (`src/types/user.ts`, `express.d.ts`)
-  - [x] Sub-tarefa 2.3: Conexão PostgreSQL em TypeScript (`src/db/db.ts`)
-  - [/] Sub-tarefa 2.4: Middleware de Autenticação (`src/middleware/authMiddleware.ts`)
 
 ## Done ✅
+- [x] Sub-tarefa 2.5: Migração do Módulo de Usuários e Refatoração Arquitetural em Camadas (`src/dtos/user.dto.ts`, `src/models/user.model.ts`, `src/services/UsuariosService.ts`, `src/controllers/UsuariosController.ts`, `database/seed/002_seeds_admin_user.sql`)
+- [x] Sub-tarefa 2.4: Middleware de Autenticação (`src/middleware/authMiddleware.ts`)
+- [x] Sub-tarefa 2.3: Conexão PostgreSQL em TypeScript (`src/db/db.ts`)
+- [x] Sub-tarefa 2.2: Interfaces de Domínio (`src/models/user.model.ts`, `src/types/express.d.ts`, `src/types/helpers.d.ts`)
+- [x] Sub-tarefa 2.1: Infraestrutura TypeScript (`tsconfig.json`, `package.json`)
 - [x] Organização e Escrita da Documentação de Arquitetura Inicial (Issue #1)
   - [x] Criar diretório `docs/`
   - [x] Escrever `docs/arquitetura.md` (Visão geral, componentes e fluxo de webhook/websocket)

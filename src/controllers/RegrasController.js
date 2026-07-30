@@ -1,6 +1,6 @@
 // src/controllers/RegrasController.js
 
-const RegrasService = require("../models/RegrasService");
+const RegrasService = require("../services/RegrasService");
 const { asInteger } = require("../utils/helpers");
 
 /**

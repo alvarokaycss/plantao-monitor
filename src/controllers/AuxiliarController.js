@@ -1,6 +1,6 @@
 // src/controllers/AuxiliarController.js
 
-const AuxiliarService = require("../models/AuxiliarService");
+const AuxiliarService = require("../services/AuxiliarService");
 
 // Função genérica para lidar com todas as rotas de SELECT *
 const getAuxiliarTable = (tableKey) => {

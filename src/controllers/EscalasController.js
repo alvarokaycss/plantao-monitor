@@ -1,6 +1,6 @@
 // src/controllers/EscalasController.js
 
-const EscalasService = require("../models/EscalasService");
+const EscalasService = require("../services/EscalasService");
 const { asInteger, normalizeDateToISO } = require("../utils/helpers");
 
 /**

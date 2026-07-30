@@ -1,16 +1,4 @@
-// src/types/user.ts
-
-/**
- * Interface que representa o perfil completo do usuário carregado no middleware de autenticação (checkAuth)
- */
-export interface IUserProfile {
-    id_usuario: number;
-    nome: string;
-    email: string;
-    ativo: boolean;
-    perfil_nome: 'admin' | 'operator' | 'viewer';
-    recursos: string[];
-}
+// src/dtos/user.dto.ts
 
 /**
  * DTO para o corpo da requisição de registro (POST /auth/register)
@@ -37,4 +25,24 @@ export interface IUpdateUsuarioConfigDTO {
     ativo?: boolean;
     recursos?: number[];
     notificacoes?: INotificacaoItemDTO[];
+}
+
+/**
+ * DTO para atualização do perfil do próprio usuário logado (PUT /usuarios/eu/perfil)
+ */
+export interface IUpdateMeuPerfilDTO {
+    nome?: string;
+    celular?: string;
+    notificacoes?: Record<string, boolean>;
+    janela_inicio?: string | null;
+    janela_fim?: string | null;
+}
+
+/**
+ * DTO para filtros de busca de usuários (GET /usuarios)
+ */
+export interface IUsuariosFiltrosDTO {
+    id_perfil?: number | string;
+    pesquisa?: string;
+    ativo?: boolean;
 }

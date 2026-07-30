@@ -1,57 +1,67 @@
-// src/models/UsuariosService.js
+// src/services/UsuariosService.ts
 
-const { pool, SCHEMA } = require("../db/db");
-const { asInteger } = require("../utils/helpers");
+import { PoolClient } from 'pg';
+import { pool, SCHEMA } from '../db/db';
+import { asInteger } from '../utils/helpers';
+import { 
+    IUsuarioRow, 
+    IConfiguracaoNotificacaoRow, 
+    IRecursoRow, 
+    IUsuarioDetalhesResult, 
+    IUpdateUsuarioConfigPayload 
+} from '../models/user.model';
+import { IUsuariosFiltrosDTO, IUpdateMeuPerfilDTO } from '../dtos/user.dto';
 
-/**
- * Busca usuários com base em filtros (id_perfil, pesquisa por nome/email).
- * @param {object} filtros - { id_perfil, pesquisa }
- * @returns {Array} - Lista de usuários.
- */
-exports.selectUsuariosFiltrados = async (filtros = {}) => {
-    const { id_perfil, pesquisa } = filtros;
-    const client = await pool.connect();
+export const selectUsuariosFiltrados = async (filtros: IUsuariosFiltrosDTO = {}): Promise<IUsuarioRow[]> => {
+    const { id_perfil, pesquisa, ativo } = filtros;
+    const client: PoolClient = await pool.connect();
 
     try {
-        const condicoes = [];
-        const valores = [];
+        const condicoes: string[] = [];
+        const valores: any[] = [];
         let queryIndex = 1;
+
+        if (ativo !== undefined) {
+            condicoes.push(`u.ativo = $${queryIndex}`);
+            valores.push(ativo);
+            queryIndex++;
+        }
 
         const idPerfilVal = asInteger(id_perfil);
         if (idPerfilVal) {
-            condicoes.push(`id_perfil = $${queryIndex}`);
+            condicoes.push(`u.id_perfil = $${queryIndex}`);
             valores.push(idPerfilVal);
             queryIndex++;
         }
 
         if (pesquisa && typeof pesquisa === 'string' && pesquisa.trim().length > 0) {
-            condicoes.push(`(nome ILIKE $${queryIndex} OR email ILIKE $${queryIndex})`);
+            condicoes.push(`(u.nome ILIKE $${queryIndex} OR u.email ILIKE $${queryIndex})`);
             valores.push(`%${pesquisa.trim()}%`);
             queryIndex++;
         }
 
-        let q = `SELECT * FROM ${SCHEMA}.usuario`;
+        let q = `
+            SELECT u.id_usuario, u.nome, u.email, u.id_perfil, u.ativo, u.data_criacao, p.nome as nome_perfil
+            FROM ${SCHEMA}.usuario u
+            LEFT JOIN ${SCHEMA}.perfil p ON u.id_perfil = p.id_perfil
+        `;
+
         if (condicoes.length > 0) {
             q += ` WHERE ${condicoes.join(' AND ')}`;
         }
 
-        q += ` ORDER BY nome ASC;`;
+        q += ` ORDER BY u.nome ASC;`;
 
-        const { rows } = await client.query(q, valores);
+        const { rows } = await client.query<IUsuarioRow>(q, valores);
         return rows;
 
     } finally {
         if (client) client.release();
     }
-}
+};
 
-/**
- * Busca os detalhes de um usuário, incluindo suas configurações de notificação E RECURSOS.
- * @param {number} idUsuarioVal - ID do usuário (próprio ou alvo do Admin).
- * @returns {object} - { info: user, configuracoes: [], recursos: [] }.
- */
-exports.getUsuarioDetalhes = async (idUsuarioVal) => {
-    const client = await pool.connect();
+export const getUsuarioDetalhes = async (idUsuarioVal: number): Promise<IUsuarioDetalhesResult | null> => {
+    const client: PoolClient = await pool.connect();
     try {
         const userQuery = `
             SELECT 
@@ -62,7 +72,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
             JOIN ${SCHEMA}.perfil p ON u.id_perfil = p.id_perfil
             WHERE u.id_usuario = $1;
         `;
-        const userRes = await client.query(userQuery, [idUsuarioVal]);
+        const userRes = await client.query<IUsuarioRow>(userQuery, [idUsuarioVal]);
 
         if (userRes.rows.length === 0) {
             return null;
@@ -82,7 +92,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
             WHERE c.id_usuario = $1
             ORDER BY t.nome;
         `;
-        const configRes = await client.query(configQuery, [idUsuarioVal]);
+        const configRes = await client.query<IConfiguracaoNotificacaoRow>(configQuery, [idUsuarioVal]);
 
         const recursosQuery = `
             SELECT 
@@ -93,8 +103,7 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
             JOIN ${SCHEMA}.recursos r ON ur.id_recurso = r.id_recurso
             WHERE ur.id_usuario = $1;
         `;
-        const recursosRes = await client.query(recursosQuery, [idUsuarioVal]);
-
+        const recursosRes = await client.query<IRecursoRow>(recursosQuery, [idUsuarioVal]);
 
         return {
             info: usuario,
@@ -107,16 +116,13 @@ exports.getUsuarioDetalhes = async (idUsuarioVal) => {
     }
 };
 
-
-/**
- * Atualiza as configurações de um usuário (perfil, ativo, recursos e notificações) em uma transação.
- * @param {number} idUsuarioParaConfigurar - ID do usuário alvo.
- * @param {object} payload - Dados de configuração.
- */
-exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => {
+export const updateUsuarioConfiguracao = async (
+    idUsuarioParaConfigurar: number, 
+    payload: IUpdateUsuarioConfigPayload
+): Promise<number> => {
     const { idPerfilVal, statusAtivo, recursosVal, notificacoesVal } = payload;
 
-    const client = await pool.connect();
+    const client: PoolClient = await pool.connect();
     try {
         await client.query('BEGIN');
 
@@ -128,7 +134,7 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
             WHERE id_usuario = $3
             RETURNING id_usuario;
         `;
-        const userResult = await client.query(updateUsuarioQuery, [idPerfilVal, statusAtivo, idUsuarioParaConfigurar]);
+        const userResult = await client.query<{ id_usuario: number }>(updateUsuarioQuery, [idPerfilVal, statusAtivo, idUsuarioParaConfigurar]);
 
         if (userResult.rowCount === 0) {
             throw new Error("Usuário não encontrado para configurar.");
@@ -138,7 +144,7 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
 
         if (recursosVal.length > 0) {
             const insertRecursosQuery = 'INSERT INTO ' + `${SCHEMA}.usuario_recursos` + ' (id_usuario, id_recurso) VALUES ' +
-                recursosVal.map((id, index) => `($1, $${index + 2})`).join(', ');
+                recursosVal.map((_, index) => `($1, $${index + 2})`).join(', ');
             await client.query(insertRecursosQuery, [idUsuarioParaConfigurar, ...recursosVal]);
         }
 
@@ -147,7 +153,7 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
         if (notificacoesVal.length > 0) {
             const insertNotificacoesQuery = 'INSERT INTO ' + `${SCHEMA}.configuracoes_notificacao` +
                 ' (id_usuario, id_tipo_canal, endereco_notificacao, habilitado, nome_dispositivo) VALUES ' +
-                notificacoesVal.map((n, i) =>
+                notificacoesVal.map((_, i) =>
                     `($1, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4}, $${i * 4 + 5})`
                 ).join(', ');
 
@@ -175,14 +181,8 @@ exports.updateUsuarioConfiguracao = async (idUsuarioParaConfigurar, payload) => 
     }
 };
 
-/**
- * Exclui um usuário e todas as suas relações, em uma transação.
- * Remove: usuario_recursos, configuracoes_notificacao, escala, e referências em outras tabelas.
- * @param {number} idUsuarioVal - ID do usuário a ser excluído.
- * @returns {number} - ID do usuário excluído.
- */
-exports.deleteUsuario = async (idUsuarioVal) => {
-    const client = await pool.connect();
+export const deleteUsuario = async (idUsuarioVal: number): Promise<number> => {
+    const client: PoolClient = await pool.connect();
     try {
         await client.query('BEGIN');
 
@@ -202,10 +202,10 @@ exports.deleteUsuario = async (idUsuarioVal) => {
         await client.query('COMMIT');
         return idUsuarioVal;
 
-    } catch (error) {
+    } catch (error: any) {
         await client.query('ROLLBACK');
 
-        if (error.code === '23503') {
+        if (error && error.code === '23503') {
             throw new Error('Não é possível excluir o usuário: ele possui registros vinculados em incidentes ou regras.');
         }
 
@@ -215,20 +215,19 @@ exports.deleteUsuario = async (idUsuarioVal) => {
     }
 };
 
-exports.getAllUsuarios = async (filtros = {}) => {
-    const client = await pool.connect();
+export const getAllUsuarios = async (filtros: IUsuariosFiltrosDTO = {}): Promise<IUsuarioRow[]> => {
+    const client: PoolClient = await pool.connect();
     try {
         let query = `
             SELECT id_usuario, nome, email, id_perfil, ativo, data_criacao
             FROM ${SCHEMA}.usuario
         `;
         
-        const conditions = [];
-        const values = [];
+        const conditions: string[] = [];
+        const values: any[] = [];
 
-        // Se o filtro 'ativo' foi passado, adiciona ao WHERE
         if (filtros.ativo !== undefined) {
-            values.push(filtros.ativo); // $1
+            values.push(filtros.ativo);
             conditions.push(`ativo = $${values.length}`);
         }
 
@@ -238,7 +237,7 @@ exports.getAllUsuarios = async (filtros = {}) => {
 
         query += ' ORDER BY nome ASC;';
 
-        const { rows } = await client.query(query, values);
+        const { rows } = await client.query<IUsuarioRow>(query, values);
         return rows;
 
     } finally {
@@ -246,15 +245,13 @@ exports.getAllUsuarios = async (filtros = {}) => {
     }
 };
 
-// src/models/UsuariosService.js
-
-exports.updateMeuPerfil = async (idUsuario, dados) => {
-    const client = await pool.connect();
+export const updateMeuPerfil = async (idUsuario: number, dados: IUpdateMeuPerfilDTO): Promise<void> => {
+    const client: PoolClient = await pool.connect();
     try {
         await client.query('BEGIN');
 
         let updateQuery = `UPDATE ${SCHEMA}.usuario SET `;
-        const updateValues = [];
+        const updateValues: any[] = [];
         let idx = 1;
 
         if (dados.nome !== undefined) {
@@ -263,9 +260,8 @@ exports.updateMeuPerfil = async (idUsuario, dados) => {
             idx++;
         }
         
-        // Atualiza horários
-        updateQuery += `notificacao_janela_inicio = $${idx}, notificacao_janela_fim = $${idx+1} `;
-        updateValues.push(dados.janela_inicio, dados.janela_fim);
+        updateQuery += `notificacao_janela_inicio = $${idx}, notificacao_janela_fim = $${idx + 1} `;
+        updateValues.push(dados.janela_inicio || null, dados.janela_fim || null);
         idx += 2;
 
         updateQuery += `WHERE id_usuario = $${idx}`;
@@ -273,9 +269,8 @@ exports.updateMeuPerfil = async (idUsuario, dados) => {
 
         await client.query(updateQuery, updateValues);
 
-        //  Atualiza WhatsApp
         if (dados.celular) {
-            const check = await client.query(
+            const check = await client.query<{ id_configuracao_notificacao: number }>(
                 `SELECT id_configuracao_notificacao FROM ${SCHEMA}.configuracoes_notificacao WHERE id_usuario = $1 AND id_tipo_canal = 3`,
                 [idUsuario]
             );
@@ -293,15 +288,16 @@ exports.updateMeuPerfil = async (idUsuario, dados) => {
             }
         }
 
-        // Atualiza Toggles
-        const mapCanais = { push: 1, email: 2, whatsapp: 3 };
-        for (const [key, enabled] of Object.entries(dados.notificacoes)) {
-            const idTipo = mapCanais[key];
-            if (idTipo) {
-                await client.query(
-                    `UPDATE ${SCHEMA}.configuracoes_notificacao SET habilitado = $1 WHERE id_usuario = $2 AND id_tipo_canal = $3`,
-                    [enabled, idUsuario, idTipo]
-                );
+        const mapCanais: Record<string, number> = { push: 1, email: 2, whatsapp: 3 };
+        if (dados.notificacoes && typeof dados.notificacoes === 'object') {
+            for (const [key, enabled] of Object.entries(dados.notificacoes)) {
+                const idTipo = mapCanais[key];
+                if (idTipo) {
+                    await client.query(
+                        `UPDATE ${SCHEMA}.configuracoes_notificacao SET habilitado = $1 WHERE id_usuario = $2 AND id_tipo_canal = $3`,
+                        [Boolean(enabled), idUsuario, idTipo]
+                    );
+                }
             }
         }
 

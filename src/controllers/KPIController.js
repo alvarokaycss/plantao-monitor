@@ -1,6 +1,6 @@
 // src/controllers/KPIController.js
 
-const KPIService = require("../models/KPIService");
+const KPIService = require("../services/KPIService");
 
 /**
  * GET /kpis

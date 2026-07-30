@@ -1,6 +1,6 @@
 // src/controllers/GeralController.js
 
-const GeralService = require("../models/GeralService");
+const GeralService = require("../services/GeralService");
 const path = require("path");
 const pkg = require("../../package.json"); // Assume que package.json está na raiz
 const { exec } = require('child_process'); // Utilizada para rodar processos menores (scripts)

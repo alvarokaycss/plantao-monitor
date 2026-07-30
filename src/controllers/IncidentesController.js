@@ -1,6 +1,6 @@
 // src/controllers/IncidentesController.js
 
-const IncidentesService = require("../models/IncidentesService");
+const IncidentesService = require("../services/IncidentesService");
 const { asInteger } = require("../utils/helpers");
 
 /**

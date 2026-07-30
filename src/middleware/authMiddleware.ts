@@ -3,7 +3,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import admin from 'firebase-admin';
 import { pool, SCHEMA } from '../db/db';
-import { IUserProfile } from '../types/user';
+import { IUserProfile } from '../models/user.model';
 const logger = require('../utils/logger');
 
 // PERMISSÕES DE USUÁRIO (ACESSO ÀS TELAS E ROTAS DA APLICAÇÃO)

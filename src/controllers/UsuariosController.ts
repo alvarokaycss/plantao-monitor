@@ -248,7 +248,17 @@ export const deleteUsuario: RequestHandler<{ id: string }> = async (req, res) =>
     }
 
     try {
-        await UsuariosService.deleteUsuario(idUsuarioParaDeletar);
+        const uidFirebase = await UsuariosService.deleteUsuario(idUsuarioParaDeletar);
+
+        // Se o usuário possuir conta vinculada no Firebase Auth, remove da nuvem
+        if (uidFirebase && typeof uidFirebase === 'string' && uidFirebase.length > 0) {
+            try {
+                await admin.auth().deleteUser(uidFirebase);
+            } catch (fbError) {
+                logger.error({ err: fbError, uidFirebase }, "Aviso: Usuário removido do PostgreSQL mas não encontrado no Firebase Auth.");
+            }
+        }
+
         res.status(200).json({ message: "Usuário excluído com sucesso." });
 
     } catch (err: any) {

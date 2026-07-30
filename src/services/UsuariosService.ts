@@ -181,7 +181,7 @@ export const updateUsuarioConfiguracao = async (
     }
 };
 
-export const deleteUsuario = async (idUsuarioVal: number): Promise<number> => {
+export const deleteUsuario = async (idUsuarioVal: number): Promise<string | null> => {
     const client: PoolClient = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -192,15 +192,17 @@ export const deleteUsuario = async (idUsuarioVal: number): Promise<number> => {
 
         await client.query(`DELETE FROM ${SCHEMA}.escala WHERE id_usuario = $1`, [idUsuarioVal]);
 
-        const query = `DELETE FROM ${SCHEMA}.usuario WHERE id_usuario = $1 RETURNING id_usuario`;
-        const { rowCount } = await client.query(query, [idUsuarioVal]);
+        const query = `DELETE FROM ${SCHEMA}.usuario WHERE id_usuario = $1 RETURNING id_usuario, uid_firebase`;
+        const { rows, rowCount } = await client.query<{ id_usuario: number; uid_firebase: string | null }>(query, [idUsuarioVal]);
 
         if (rowCount === 0) {
             throw new Error('Usuário não encontrado.');
         }
 
         await client.query('COMMIT');
-        return idUsuarioVal;
+        
+        // Retorna o UID do Firebase caso exista para remoção via Admin SDK
+        return rows[0]?.uid_firebase ? rows[0].uid_firebase : '';
 
     } catch (error: any) {
         await client.query('ROLLBACK');

@@ -1,6 +1,6 @@
 ---
 name: architecture-and-docs-guardian
-description: Garante a integridade da arquitetura, a atualização da pasta docs/, a atualização do Graphify e provê aprendizado contextual sobre TypeScript e React.
+description: Garante a integridade da arquitetura, a atualização da pasta docs/, a atualização do Graphify, documentação do Notion e provê aprendizado contextual sobre TypeScript e React.
 ---
 
 # Architecture and Docs Guardian
@@ -31,7 +31,8 @@ Esta skill garante a consistência técnica, a documentação acadêmica e o con
     - **Seção 1.2:** Engenharia do Backend & Otimização de Pool.
     - **Seção 1.3:** Infraestrutura Docker & Banco de Dados.
     - **Seção 1.4:** Qualidade de Software, Testes & CI/CD.
-    - **Seção 1.5:** Grafo de Conhecimento (Graphify) & Skills.
+    - **Seção 1.5:** Grafo de Conhecimento (Graphify) & Skills Superpowers.
+    - **Seção 1.6:** Metodologia de Desenvolvimento Auxiliada por IA (*Agentic Software Engineering*, Pair Programming Humano-Agente, Orquestração MCP, Resolução Didática de Erros).
 
 ### 3. Aprendizado Contextual (TypeScript & React)
 * **Antes de iniciar a escrita de código para migração para TypeScript:**

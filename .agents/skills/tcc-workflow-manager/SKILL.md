@@ -1,11 +1,17 @@
 ---
 name: tcc-workflow-manager
-description: Gerencia o ciclo de vida de Issues, Milestones e o quadro Kanban do GitHub Projects, mantendo o task.md local sincronizado.
+description: Gerencia o ciclo de vida de Issues, Milestones, estratégia de Git Branches e o quadro Kanban do GitHub Projects, mantendo o task.md local sincronizado.
 ---
 
 # TCC Workflow Manager
 
 Esta skill coordena o fluxo organizacional do projeto **Plantão Monitor**, garantindo que o desenvolvimento siga as etapas profissionais do TCC.
+
+## 🌿 Política Estrita de Git Branches
+
+* **`master` / `main` (INTOCÁVEIS & HISTÓRICAS)**: Mantêm o código legado original do estágio para comprovação histórica da evolução do projeto no relatório da monografia. NUNCA fazer commit, push direto ou merge não planejado nestas branches.
+* **`develop` (BRANCH BASE DE INTEGRAÇÃO)**: É a branch de desenvolvimento contínuo do TCC. Todas as Pull Requests/Merges de features concluídas devem ter como destino a branch `develop`.
+* **`feature/*` (BRANCHES DE TRABALHO ISOLADO)**: Onde a codificação e migração ativa ocorrem (ex: `feature/backend-typescript`). Permanecem ativas enquanto as sub-tarefas da Issue correspondente estiverem em progresso.
 
 ## Diretrizes de Execução
 
@@ -23,12 +29,13 @@ Esta skill coordena o fluxo organizacional do projeto **Plantão Monitor**, gara
 * Vincule a Issue à Milestone correspondente no GitHub.
 
 ### 3. Conclusão de Tarefas & Sincronização
-* Após a verificação dos testes, instrua o usuário a commitar e dar push no código para o GitHub.
+* Após a verificação dos testes, commite o código e sincronize no GitHub remota na branch de feature ativa.
+* Atualize o checklist da Issue e adicione um comentário detalhando a entrega via MCP `github-mcp-server`.
 * Lembre o usuário de:
-  * Mover a Issue para **Done** (Concluído) no GitHub Projects.
-  * Fechar a Issue correspondente.
+  * Mover a Issue para **Done** (Concluído) no GitHub Projects se todas as sub-tarefas acabarem.
+  * Fechar a Issue correspondente ao finalizar por completo.
   * Mover a tarefa para a seção `## Done ✅` do `task.md` local, marcando-a com `[x]`.
-  * Sincronizar os avanços na página do Notion `TCC - Projeto` inserindo o registro na seção modular correspondente (Seção 1.1 a 1.5).
+  * Sincronizar os avanços na página do Notion `TCC - Projeto` inserindo o registro na seção modular correspondente (`📘 Relatório de Evolução & Decisões da Monografia`).
 
 ### 4. Gestão de Milestones
 * Respeite a ordem lógica das Milestones acordadas no TCC:
